@@ -220,6 +220,40 @@ const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }
     return unsub;
   }, [sessionId, tabId, updateTabCwd]);
 
+  // Periodic snapshot push for remote control
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const term = termInstanceRef.current;
+      if (!term) return;
+      const buffer = term.buffer.active;
+      const lines: Array<{ text: string; fg: number; bg: number }> = [];
+      for (let row = 0; row < buffer.length; row++) {
+        const line = buffer.getLine(row);
+        if (line) {
+          lines.push({ text: line.translateToString(true), fg: 7, bg: 0 });
+        } else {
+          lines.push({ text: '', fg: 7, bg: 0 });
+        }
+      }
+      const tabs = useTabStore.getState().tabs;
+      const tab = tabs.find(t => t.id === tabId);
+      const snapshot = {
+        sessionId,
+        tabTitle: tab?.title || '',
+        cwd: tab?.cwd || getTabCwd || '',
+        cols: term.cols,
+        termRows: term.rows,
+        cursorRow: buffer.cursorY,
+        cursorCol: buffer.cursorX,
+        lines,
+        timestamp: Date.now(),
+      };
+      window.remoteAPI.pushSnapshot(sessionId, snapshot);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [sessionId, tabId, getTabCwd]);
+
   // Close context menu on click outside
   useEffect(() => {
     const closeMenu = (e: MouseEvent) => {

@@ -8,6 +8,7 @@ import HistoryPanel from './components/HistoryPanel';
 import PromptTool from './components/PromptTool';
 import WorkspacePanel from './components/WorkspacePanel';
 import MenuBar from './components/MenuBar';
+import QrCodePanel from './components/QrCodePanel';
 import { useTabStore } from './store/tabStore';
 import { usePaneStore } from './store/paneStore';
 import { useCommandStore } from './store/commandStore';
@@ -26,6 +27,9 @@ const App: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [showPromptTool, setShowPromptTool] = useState(false);
   const [defaultShellType, setDefaultShellType] = useState<string>('powershell');
+  const [remoteRunning, setRemoteRunning] = useState(false);
+  const [showQrCode, setShowQrCode] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
   const initialTabCreated = useRef(false);
   const sessionLoaded = useRef(false);
 
@@ -39,10 +43,11 @@ const App: React.FC = () => {
     window.workspaceAPI.getAll().then(setFolders);
   }, [setFolders]);
 
-  // Sync defaultShellType with main process
+  // Sync defaultShellType and remote status with main process
   useEffect(() => {
     window.shellAPI.getDefaultType().then(setDefaultShellType);
     const unsub = window.shellAPI.onDefaultTypeChanged(setDefaultShellType);
+    window.remoteAPI.isRunning().then(setRemoteRunning);
     return unsub;
   }, []);
 
@@ -104,6 +109,20 @@ const App: React.FC = () => {
 
   const openSettings = useCallback(() => setShowSettings(true), []);
   const closeSettings = useCallback(() => setShowSettings(false), []);
+
+  const handleOpenQrCode = useCallback(async () => {
+    const running = await window.remoteAPI.isRunning();
+    if (!running) {
+      // Try to start remote server
+      const started = await window.remoteAPI.toggle();
+      if (!started) {
+        // Could show an error, but for now just continue
+      }
+    }
+    const url = await window.remoteAPI.getRemoteUrl();
+    setQrCodeUrl(url);
+    setShowQrCode(true);
+  }, []);
 
   // Register commands
   useEffect(() => {
@@ -233,6 +252,12 @@ const App: React.FC = () => {
       }}
       onOpenSettings={openSettings}
       onToggleSearch={toggleSearch}
+      onToggleRemote={async () => {
+        const v = await window.remoteAPI.toggle();
+        setRemoteRunning(v);
+      }}
+      remoteRunning={remoteRunning}
+      onOpenQrCode={handleOpenQrCode}
     />
   );
 
@@ -241,6 +266,7 @@ const App: React.FC = () => {
       <div className="app-root">
         {menuBar}
         <SettingsPage onClose={closeSettings} />
+        {showQrCode && <QrCodePanel url={qrCodeUrl} onClose={() => setShowQrCode(false)} />}
       </div>
     );
   }
@@ -288,6 +314,7 @@ const App: React.FC = () => {
         <CommandPalette />
         {showPromptTool && <PromptTool onClose={() => setShowPromptTool(false)} />}
       </div>
+      {showQrCode && <QrCodePanel url={qrCodeUrl} onClose={() => setShowQrCode(false)} />}
     </div>
   );
 };

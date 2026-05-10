@@ -1,4 +1,4 @@
-import type { ShellAPI, ConfigAPI, SessionAPI, HistoryAPI, ClipboardAPI, WindowAPI, PromptAPI, WorkspaceAPI, SessionPersistenceAPI } from '../preload/index';
+import type { ShellAPI, ConfigAPI, SessionAPI, HistoryAPI, ClipboardAPI, WindowAPI, PromptAPI, RemoteAPI, WorkspaceAPI, SessionPersistenceAPI } from '../preload/index';
 
 declare global {
   interface Window {
@@ -9,6 +9,7 @@ declare global {
     clipboardAPI: ClipboardAPI;
     windowAPI: WindowAPI;
     promptAPI: PromptAPI;
+    remoteAPI: RemoteAPI;
     workspaceAPI: WorkspaceAPI;
     sessionPersistenceAPI: SessionPersistenceAPI;
     appAPI: {

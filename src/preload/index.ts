@@ -192,6 +192,24 @@ const workspaceAPI: WorkspaceAPI = {
 
 contextBridge.exposeInMainWorld('workspaceAPI', workspaceAPI);
 
+export interface RemoteAPI {
+  pushSnapshot(sessionId: string, snapshot: any): Promise<void>;
+  getRemoteUrl(): Promise<string>;
+  getLanIp(): Promise<string>;
+  isRunning(): Promise<boolean>;
+  toggle(): Promise<boolean>;
+}
+
+const remoteAPI: RemoteAPI = {
+  pushSnapshot: (sessionId, snapshot) => ipcRenderer.invoke('remote:pushSnapshot', sessionId, snapshot),
+  getRemoteUrl: () => ipcRenderer.invoke('remote:getUrl'),
+  getLanIp: () => ipcRenderer.invoke('remote:getLanIp'),
+  isRunning: () => ipcRenderer.invoke('remote:isRunning'),
+  toggle: () => ipcRenderer.invoke('remote:toggle'),
+};
+
+contextBridge.exposeInMainWorld('remoteAPI', remoteAPI);
+
 contextBridge.exposeInMainWorld('appAPI', {
   onReady: (callback: (windowId?: string) => void) => {
     ipcRenderer.on('terminal-ready', (_event, windowId) => callback(windowId));

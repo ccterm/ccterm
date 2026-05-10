@@ -100,6 +100,10 @@ interface TerminalSession {
 
 const sessions = new Map<string, TerminalSession>();
 
+export function getSessionMap(): Map<string, TerminalSession> {
+  return sessions;
+}
+
 export function killAllSessions(): void {
   for (const [id, session] of sessions) {
     try { session.pty.kill(); } catch { /* ignore */ }

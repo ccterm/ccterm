@@ -8,6 +8,9 @@ import { setupHistoryHandlers } from './history';
 import { setupPromptToolHandlers } from './promptTool';
 import { setupWorkspaceHandlers, setWorkspaceVisible } from './workspace';
 import { setupSessionPersistenceHandlers, loadSessionState } from './sessionPersistence';
+import { startRemoteServer, stopRemoteServer, setupRemoteHandlers, setActiveRemoteConfig } from './remoteServer';
+import { startRemoteSync, stopRemoteSync } from './remoteSync';
+import { getConfig } from './config';
 
 ipcMain.handle('shell:openExternal', (_event, url: string) => {
   const { shell } = require('electron');
@@ -90,6 +93,20 @@ app.whenReady().then(() => {
 
   Menu.setApplicationMenu(null);
 
+  // Start remote control server if enabled in config
+  const config = getConfig();
+  setActiveRemoteConfig(config);
+  setupRemoteHandlers();
+  if (config.remoteControl.enabled) {
+    startRemoteServer(config.remoteControl.port, config.remoteControl.token)
+      .then(() => {
+        startRemoteSync(config.remoteControl.syncInterval);
+      })
+      .catch((err) => {
+        console.error('[CCTerm] Failed to start remote server:', err.message);
+      });
+  }
+
   setupWindowManager();
   createTerminalWindow();
   setupQuakeMode();
@@ -108,6 +125,8 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
+  stopRemoteSync();
+  stopRemoteServer();
   killAllSessions();
   destroyQuakeMode();
 });

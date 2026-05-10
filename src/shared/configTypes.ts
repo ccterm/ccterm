@@ -81,6 +81,13 @@ export interface GlobalSettings {
   initialCols: number;
 }
 
+export interface RemoteControlConfig {
+  enabled: boolean;
+  port: number;
+  token: string;
+  syncInterval: number;
+}
+
 export interface AppConfig {
   version: number;
   global: GlobalSettings;
@@ -88,6 +95,7 @@ export interface AppConfig {
   schemes: ColorScheme[];
   keybindings: Keybinding[];
   sshConnections: SSHConnection[];
+  remoteControl: RemoteControlConfig;
 }
 
 export const DEFAULT_COLOR_SCHEMES: ColorScheme[] = [
@@ -310,5 +318,11 @@ export function createDefaultConfig(): AppConfig {
     schemes: DEFAULT_COLOR_SCHEMES,
     keybindings: DEFAULT_KEYBINDINGS,
     sshConnections: [],
+    remoteControl: {
+      enabled: false,
+      port: 3001,
+      token: '',
+      syncInterval: 2000,
+    },
   };
 }
