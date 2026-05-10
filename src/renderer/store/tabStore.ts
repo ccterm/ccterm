@@ -6,6 +6,7 @@ export interface TabInfo {
   sessionId: string;
   shell: string;
   pid: number;
+  cwd?: string;
 }
 
 interface TabState {
@@ -18,6 +19,7 @@ interface TabState {
   duplicateTab: (id: string) => TabInfo | null;
   setActiveTab: (id: string) => void;
   updateTabTitle: (id: string, title: string) => void;
+  updateTabCwd: (id: string, cwd: string) => void;
   reorderTabs: (fromIndex: number, toIndex: number) => void;
 }
 
@@ -44,6 +46,7 @@ export const useTabStore = create<TabState>((set, get) => ({
       title: info.title || 'Terminal',
       shell: info.shell || '',
       pid: info.pid || 0,
+      cwd: info.cwd || undefined,
     };
     set((state) => ({
       tabs: [...state.tabs, tab],
@@ -108,6 +111,12 @@ export const useTabStore = create<TabState>((set, get) => ({
   updateTabTitle: (id, title) => {
     set((state) => ({
       tabs: state.tabs.map((t) => (t.id === id ? { ...t, title } : t)),
+    }));
+  },
+
+  updateTabCwd: (id, cwd) => {
+    set((state) => ({
+      tabs: state.tabs.map((t) => (t.id === id ? { ...t, cwd } : t)),
     }));
   },
 

@@ -1,7 +1,12 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { useTabStore } from '../store/tabStore';
 import { usePaneStore } from '../store/paneStore';
+import { useWorkspaceStore } from '../store/workspaceStore';
 import '../styles/tabbar.css';
+
+interface TabBarProps {
+  defaultShellType: string;
+}
 
 interface ContextMenuState {
   x: number;
@@ -9,10 +14,11 @@ interface ContextMenuState {
   tabId: string;
 }
 
-const TabBar: React.FC = () => {
+const TabBar: React.FC<TabBarProps> = ({ defaultShellType }) => {
   const { tabs, activeTabId, setActiveTab, removeTab, addTab, closeOtherTabs, closeRightTabs, reorderTabs } =
     useTabStore();
   const initRoot = usePaneStore((s) => s.initRoot);
+  const activeFolder = useWorkspaceStore((s) => s.activeFolder);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -96,6 +102,7 @@ const TabBar: React.FC = () => {
             className={`tab-item ${tab.id === activeTabId ? 'active' : ''} ${
               dragOverIndex === index ? 'drag-over' : ''
             }`}
+            title={tab.cwd || tab.title}
             onClick={() => handleTabClick(tab.id)}
             onContextMenu={(e) => handleContextMenu(e, tab.id)}
             draggable
@@ -128,7 +135,12 @@ const TabBar: React.FC = () => {
         ))}
         <button
           className="tab-new"
-          onClick={() => { const tab = addTab({ title: 'Terminal' }); initRoot(tab.id); }}
+          onClick={() => {
+            const title = defaultShellType === 'cmd' ? 'CMD' : 'PowerShell';
+            const cwd = activeFolder || undefined;
+            const tab = addTab({ title, shell: defaultShellType, cwd });
+            initRoot(tab.id);
+          }}
           title="New tab (Ctrl+Shift+T)"
         >
           <svg viewBox="0 0 16 16" width="14" height="14">

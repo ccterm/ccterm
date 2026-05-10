@@ -3,12 +3,17 @@ import type { AppConfig } from '../shared/configTypes';
 import type { SessionData } from '../main/session';
 
 export interface ShellAPI {
-  create(sessionId: string): Promise<{ pid: number; shell: string }>;
+  create(sessionId: string, shellType?: string, cwd?: string): Promise<{ pid: number; shell: string }>;
   resize(sessionId: string, cols: number, rows: number): Promise<void>;
   write(sessionId: string, data: string): Promise<void>;
   kill(sessionId: string): Promise<void>;
   onData(sessionId: string, callback: (data: string) => void): () => void;
   onExit(sessionId: string, callback: (code: number) => void): () => void;
+  getDefaultType(): Promise<string>;
+  setDefaultType(type: string): Promise<void>;
+  onDefaultTypeChanged(callback: (type: string) => void): () => void;
+  getCwd(sessionId: string): Promise<string>;
+  onCwdChanged(sessionId: string, callback: (cwd: string) => void): () => void;
 }
 
 export interface ConfigAPI {
@@ -35,10 +40,12 @@ export interface HistoryAPI {
   toggleFavorite(id: string): Promise<boolean>;
   getFavorites(): Promise<any[]>;
   stats(): Promise<{ total: number; today: number; favorites: number; topCommands: Array<{ command: string; count: number }> }>;
+  onNewRecord(callback: (record: any) => void): () => void;
+  exportHistory(excludePatterns?: string[]): Promise<boolean>;
 }
 
 const shellAPI: ShellAPI = {
-  create: (sessionId) => ipcRenderer.invoke('shell:create', sessionId),
+  create: (sessionId, shellType, cwd) => ipcRenderer.invoke('shell:create', sessionId, shellType, cwd),
   resize: (sessionId, cols, rows) => ipcRenderer.invoke('shell:resize', sessionId, cols, rows),
   write: (sessionId, data) => ipcRenderer.invoke('shell:write', sessionId, data),
   kill: (sessionId) => ipcRenderer.invoke('shell:kill', sessionId),
@@ -51,6 +58,20 @@ const shellAPI: ShellAPI = {
   onExit: (sessionId, callback) => {
     const channel = `shell:exit:${sessionId}`;
     const handler = (_event: any, code: number) => callback(code);
+    ipcRenderer.on(channel, handler);
+    return () => ipcRenderer.removeListener(channel, handler);
+  },
+  getDefaultType: () => ipcRenderer.invoke('shell:getDefaultType'),
+  setDefaultType: (type) => ipcRenderer.invoke('shell:setDefaultType', type),
+  onDefaultTypeChanged: (callback) => {
+    const handler = (_event: any, type: string) => callback(type);
+    ipcRenderer.on('shell:defaultTypeChanged', handler);
+    return () => ipcRenderer.removeListener('shell:defaultTypeChanged', handler);
+  },
+  getCwd: (sessionId) => ipcRenderer.invoke('shell:getCwd', sessionId),
+  onCwdChanged: (sessionId, callback) => {
+    const channel = `shell:cwd:${sessionId}`;
+    const handler = (_event: any, cwd: string) => callback(cwd);
     ipcRenderer.on(channel, handler);
     return () => ipcRenderer.removeListener(channel, handler);
   },
@@ -80,6 +101,12 @@ const historyAPI: HistoryAPI = {
   toggleFavorite: (id) => ipcRenderer.invoke('history:toggleFavorite', id),
   getFavorites: () => ipcRenderer.invoke('history:getFavorites'),
   stats: () => ipcRenderer.invoke('history:stats'),
+  onNewRecord: (callback) => {
+    const handler = (_event: any, record: any) => callback(record);
+    ipcRenderer.on('history:newRecord', handler);
+    return () => ipcRenderer.removeListener('history:newRecord', handler);
+  },
+  exportHistory: (excludePatterns?: string[]) => ipcRenderer.invoke('history:export', excludePatterns),
 };
 
 contextBridge.exposeInMainWorld('shellAPI', shellAPI);
@@ -98,6 +125,74 @@ const clipboardAPI: ClipboardAPI = {
 };
 
 contextBridge.exposeInMainWorld('clipboardAPI', clipboardAPI);
+
+export interface MenuAPI {
+  onToggleHistory(callback: (visible: boolean) => void): () => void;
+  onTogglePromptTool(callback: () => void): () => void;
+  onToggleWorkspace(callback: (visible: boolean) => void): () => void;
+}
+
+const menuAPI: MenuAPI = {
+  onToggleHistory: (callback) => {
+    const handler = (_event: any, visible: boolean) => callback(visible);
+    ipcRenderer.on('menu:toggle-history', handler);
+    return () => ipcRenderer.removeListener('menu:toggle-history', handler);
+  },
+  onTogglePromptTool: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('menu:toggle-prompt-tool', handler);
+    return () => ipcRenderer.removeListener('menu:toggle-prompt-tool', handler);
+  },
+  onToggleWorkspace: (callback) => {
+    const handler = (_event: any, visible: boolean) => callback(visible);
+    ipcRenderer.on('menu:toggle-workspace', handler);
+    return () => ipcRenderer.removeListener('menu:toggle-workspace', handler);
+  },
+};
+
+contextBridge.exposeInMainWorld('menuAPI', menuAPI);
+
+export interface PromptAPI {
+  getAll(): Promise<any[]>;
+  save(template: any): Promise<any[]>;
+  delete(id: string): Promise<boolean>;
+}
+
+const promptAPI: PromptAPI = {
+  getAll: () => ipcRenderer.invoke('prompt:getAll'),
+  save: (template) => ipcRenderer.invoke('prompt:save', template),
+  delete: (id) => ipcRenderer.invoke('prompt:delete', id),
+};
+
+contextBridge.exposeInMainWorld('promptAPI', promptAPI);
+
+export interface SessionPersistenceAPI {
+  load(): Promise<{ tabs: Array<{ title: string; shell: string; cwd?: string }>; activeTabIndex: number; workspaceVisible: boolean; historyVisible: boolean }>;
+  save(state: { tabs: Array<{ title: string; shell: string; cwd?: string }>; activeTabIndex: number; workspaceVisible: boolean; historyVisible: boolean }): Promise<void>;
+  syncHistory(visible: boolean): Promise<void>;
+}
+
+const sessionPersistenceAPI: SessionPersistenceAPI = {
+  load: () => ipcRenderer.invoke('persistence:loadState'),
+  save: (state) => ipcRenderer.invoke('persistence:saveState', state),
+  syncHistory: (visible) => ipcRenderer.invoke('menu:syncHistoryVisible', visible),
+};
+
+contextBridge.exposeInMainWorld('sessionPersistenceAPI', sessionPersistenceAPI);
+
+export interface WorkspaceAPI {
+  getAll(): Promise<string[]>;
+  save(folders: string[]): Promise<void>;
+  selectFolder(): Promise<string[] | null>;
+}
+
+const workspaceAPI: WorkspaceAPI = {
+  getAll: () => ipcRenderer.invoke('workspace:getAll'),
+  save: (folders) => ipcRenderer.invoke('workspace:save', folders),
+  selectFolder: () => ipcRenderer.invoke('workspace:selectFolder'),
+};
+
+contextBridge.exposeInMainWorld('workspaceAPI', workspaceAPI);
 
 contextBridge.exposeInMainWorld('appAPI', {
   onReady: (callback: (windowId?: string) => void) => {

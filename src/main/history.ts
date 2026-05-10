@@ -1,6 +1,7 @@
-import { app, ipcMain } from 'electron';
+import { app, ipcMain, BrowserWindow, dialog } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
+import { getSessionCwd } from './shell';
 
 export interface CommandRecord {
   id: string;
@@ -58,8 +59,11 @@ function generateId(): string {
 export function setupHistoryHandlers(): void {
   ipcMain.handle('history:record', (_event, record: Omit<CommandRecord, 'id' | 'timestamp'>) => {
     const store = loadHistory();
+    // Auto-fill directory from active session's CWD
+    const directory = record.directory || getSessionCwd(record.sessionId);
     const newRecord: CommandRecord = {
       ...record,
+      directory,
       id: generateId(),
       timestamp: Date.now(),
     };
@@ -71,6 +75,14 @@ export function setupHistoryHandlers(): void {
     }
 
     saveHistory();
+
+    // Notify all windows of the new record
+    BrowserWindow.getAllWindows().forEach((win) => {
+      if (!win.isDestroyed() && win.webContents && !win.webContents.isDestroyed()) {
+        win.webContents.send('history:newRecord', newRecord);
+      }
+    });
+
     return newRecord;
   });
 
@@ -138,5 +150,35 @@ export function setupHistoryHandlers(): void {
       favorites: store.records.filter((r) => r.favorite).length,
       topCommands,
     };
+  });
+
+  ipcMain.handle('history:export', async (_event, excludePatterns?: string[]) => {
+    const store = loadHistory();
+    const win = BrowserWindow.getFocusedWindow();
+    if (!win) return false;
+
+    const result = await dialog.showSaveDialog(win, {
+      title: 'Export Command History',
+      defaultPath: `ccterm-history-${new Date().toISOString().slice(0, 10)}.json`,
+      filters: [
+        { name: 'JSON', extensions: ['json'] },
+        { name: 'Text', extensions: ['txt'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+    });
+
+    if (!result.canceled && result.filePath) {
+      let records = store.records;
+      if (excludePatterns && excludePatterns.length > 0) {
+        records = records.filter((r) => {
+          const cmd = r.command.toLowerCase();
+          return !excludePatterns.some((p) => p.trim() && cmd.includes(p.trim().toLowerCase()));
+        });
+      }
+      const data = JSON.stringify(records, null, 2);
+      fs.writeFileSync(result.filePath, data, 'utf-8');
+      return true;
+    }
+    return false;
   });
 }

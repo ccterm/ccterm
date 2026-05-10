@@ -30,6 +30,9 @@ const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }
     hasSelection: boolean;
   }>({ visible: false, x: 0, y: 0, hasSelection: false });
   const updateTabTitle = useTabStore((s) => s.updateTabTitle);
+  const updateTabCwd = useTabStore((s) => s.updateTabCwd);
+  const getTabShell = useTabStore((s) => s.tabs.find(t => t.id === tabId)?.shell);
+  const getTabCwd = useTabStore((s) => s.tabs.find(t => t.id === tabId)?.cwd);
   const registerAddon = useSearchStore((s) => s.registerAddon);
   const unregisterAddon = useSearchStore((s) => s.unregisterAddon);
   const profile = useProfile();
@@ -114,8 +117,10 @@ const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }
     termInstanceRef.current = term;
     fitAddon.fit();
 
-    // Create shell session
-    window.shellAPI.create(sessionId).then(({ pid, shell }) => {
+    // Create shell session (pass shell type from tab info, e.g. 'powershell' or 'cmd')
+    const shellType = getTabShell || undefined;
+    const cwd = getTabCwd || undefined;
+    window.shellAPI.create(sessionId, shellType, cwd).then(({ pid, shell }) => {
       updateTabTitle(tabId, basename(shell));
       term.writeln(`\x1b[32mCCTerm Super Terminal\x1b[0m - PID: ${pid}`);
       term.writeln('');
@@ -136,7 +141,7 @@ const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }
       window.shellAPI.write(sessionId, data);
     });
 
-    // Handle resize
+    // Handle resize — both window resize and layout changes (history panel, etc.)
     const onResize = () => {
       try {
         fitAddon.fit();
@@ -147,6 +152,8 @@ const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }
       } catch { /* ignore */ }
     };
     window.addEventListener('resize', onResize);
+    const resizeObserver = new ResizeObserver(onResize);
+    resizeObserver.observe(containerRef.current);
 
     // Shell exit handling
     const unsubExit = window.shellAPI.onExit(sessionId, (code) => {
@@ -190,6 +197,7 @@ const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }
       unsubKey.dispose();
       unsubExit();
       window.removeEventListener('resize', onResize);
+      resizeObserver.disconnect();
       unregisterAddon(sessionId);
       if (containerRef.current) {
         containerRef.current.removeEventListener('drop', dragHandler);
@@ -203,6 +211,14 @@ const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }
   }, [sessionId, tabId, updateTabTitle, onReady, registerAddon, unregisterAddon,
       profile.fontSize, profile.fontFace, profile.cursorShape, profile.cursorColor,
       profile.scrollbackLines, profile.opacity, scheme]);
+
+  // Track CWD changes and update the tab store (for workspace folder matching)
+  useEffect(() => {
+    const unsub = window.shellAPI.onCwdChanged(sessionId, (cwd) => {
+      updateTabCwd(tabId, cwd);
+    });
+    return unsub;
+  }, [sessionId, tabId, updateTabCwd]);
 
   // Close context menu on click outside
   useEffect(() => {
