@@ -7,6 +7,7 @@ import SearchOverlay from './components/SearchOverlay';
 import HistoryPanel from './components/HistoryPanel';
 import PromptTool from './components/PromptTool';
 import WorkspacePanel from './components/WorkspacePanel';
+import MenuBar from './components/MenuBar';
 import { useTabStore } from './store/tabStore';
 import { usePaneStore } from './store/paneStore';
 import { useCommandStore } from './store/commandStore';
@@ -32,30 +33,6 @@ const App: React.FC = () => {
   useEffect(() => {
     loadConfig();
   }, [loadConfig]);
-
-  // Listen for View > Show History menu toggle
-  useEffect(() => {
-    const unsub = window.menuAPI.onToggleHistory((visible) => {
-      setShowHistory(visible);
-    });
-    return unsub;
-  }, []);
-
-  // Listen for Tool > Prompt Tool menu toggle
-  useEffect(() => {
-    const unsub = window.menuAPI.onTogglePromptTool(() => {
-      setShowPromptTool((v) => !v);
-    });
-    return unsub;
-  }, []);
-
-  // Listen for View > Folder as Workspace toggle
-  useEffect(() => {
-    const unsub = window.menuAPI.onToggleWorkspace((visible) => {
-      setWsVisible(visible);
-    });
-    return unsub;
-  }, [setWsVisible]);
 
   // Load workspace folders on mount
   useEffect(() => {
@@ -123,7 +100,6 @@ const App: React.FC = () => {
       historyVisible: showHistory,
     };
     window.sessionPersistenceAPI.save(state);
-    window.sessionPersistenceAPI.syncHistory(showHistory);
   }, [tabs, activeTabId, wsVisible, showHistory]);
 
   const openSettings = useCallback(() => setShowSettings(true), []);
@@ -149,6 +125,13 @@ const App: React.FC = () => {
       if (e.ctrlKey && e.shiftKey && e.key === 'F') {
         e.preventDefault();
         toggleSearch();
+        return;
+      }
+
+      // Ctrl+Shift+H - Toggle history
+      if (e.ctrlKey && e.shiftKey && e.key === 'H') {
+        e.preventDefault();
+        setShowHistory((v) => !v);
         return;
       }
 
@@ -231,50 +214,80 @@ const App: React.FC = () => {
     return findSession(root);
   })();
 
+  const menuBar = (
+    <MenuBar
+      defaultShellType={defaultShellType}
+      onSetDefaultShellType={setDefaultShellType}
+      workspaceVisible={wsVisible}
+      onToggleWorkspace={() => setWsVisible(!wsVisible)}
+      historyVisible={showHistory}
+      onToggleHistory={() => setShowHistory((v) => !v)}
+      onTogglePromptTool={() => setShowPromptTool((v) => !v)}
+      onNewTab={createDefaultTab}
+      onSplitVertical={() => {
+        if (!activeTabId) return;
+        const root = usePaneStore.getState().roots[activeTabId];
+        if (!root) return;
+        const id = usePaneStore.getState().focusedPaneId || root.id;
+        split(activeTabId, id, 'vertical', () => {});
+      }}
+      onOpenSettings={openSettings}
+      onToggleSearch={toggleSearch}
+    />
+  );
+
   if (showSettings) {
-    return <SettingsPage onClose={closeSettings} />;
+    return (
+      <div className="app-root">
+        {menuBar}
+        <SettingsPage onClose={closeSettings} />
+      </div>
+    );
   }
 
   return (
-    <div className="app-container">
-      {wsVisible && <WorkspacePanel />}
-      <div className="app-main">
-        <TabBar defaultShellType={defaultShellType} />
-        <div className="main-area">
-          <div className="terminal-area">
-            {tabs.length === 0 && activeFolder && (
-              <div className="workspace-empty-state">
-                <svg viewBox="0 0 16 16" width="48" height="48">
-                  <path d="M1 3.5A1.5 1.5 0 012.5 2h3.3l1.5 1.2h5.2A1.5 1.5 0 0114 4.7v7.8a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 011 12.5V3.5z" fill="#dcb67a" stroke="#dcb67a" strokeWidth="0.3" opacity="0.5" />
-                </svg>
-                <span className="folder-name">{activeFolder.split(/[\\/]/).pop()}</span>
-                <span className="hint">Press <kbd>Ctrl+Shift+T</kbd> or click <kbd>+</kbd> to open a terminal here</span>
-              </div>
-            )}
-            {tabs.length === 0 && !activeFolder && (
-              <div className="empty-state">
-                <p>Press <kbd>Ctrl+Shift+T</kbd> to open a new terminal</p>
-              </div>
-            )}
-            {tabs.map((tab) => (
-              <div
-                key={tab.id}
-                className={`terminal-wrapper ${tab.id === activeTabId ? 'visible' : 'hidden'}`}
-              >
-                <PaneLayout tabId={tab.id} />
-              </div>
-            ))}
-          </div>
-          {showHistory && (
-            <div className="history-sidebar">
-              <HistoryPanel onClose={() => setShowHistory(false)} embedded activeSessionId={activeSessionId} />
+    <div className="app-root">
+      {menuBar}
+      <div className="app-container">
+        {wsVisible && <WorkspacePanel />}
+        <div className="app-main">
+          <TabBar defaultShellType={defaultShellType} />
+          <div className="main-area">
+            <div className="terminal-area">
+              {tabs.length === 0 && activeFolder && (
+                <div className="workspace-empty-state">
+                  <svg viewBox="0 0 16 16" width="48" height="48">
+                    <path d="M1 3.5A1.5 1.5 0 012.5 2h3.3l1.5 1.2h5.2A1.5 1.5 0 0114 4.7v7.8a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 011 12.5V3.5z" fill="#dcb67a" stroke="#dcb67a" strokeWidth="0.3" opacity="0.5" />
+                  </svg>
+                  <span className="folder-name">{activeFolder.split(/[\\/]/).pop()}</span>
+                  <span className="hint">Press <kbd>Ctrl+Shift+T</kbd> or click <kbd>+</kbd> to open a terminal here</span>
+                </div>
+              )}
+              {tabs.length === 0 && !activeFolder && (
+                <div className="empty-state">
+                  <p>Press <kbd>Ctrl+Shift+T</kbd> to open a new terminal</p>
+                </div>
+              )}
+              {tabs.map((tab) => (
+                <div
+                  key={tab.id}
+                  className={`terminal-wrapper ${tab.id === activeTabId ? 'visible' : 'hidden'}`}
+                >
+                  <PaneLayout tabId={tab.id} />
+                </div>
+              ))}
             </div>
-          )}
+            {showHistory && (
+              <div className="history-sidebar">
+                <HistoryPanel onClose={() => setShowHistory(false)} embedded activeSessionId={activeSessionId} />
+              </div>
+            )}
+          </div>
         </div>
+        {activeSessionId && <SearchOverlay sessionId={activeSessionId} />}
+        <CommandPalette />
+        {showPromptTool && <PromptTool onClose={() => setShowPromptTool(false)} />}
       </div>
-      {activeSessionId && <SearchOverlay sessionId={activeSessionId} />}
-      <CommandPalette />
-      {showPromptTool && <PromptTool onClose={() => setShowPromptTool(false)} />}
     </div>
   );
 };

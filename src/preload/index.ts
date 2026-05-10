@@ -126,31 +126,31 @@ const clipboardAPI: ClipboardAPI = {
 
 contextBridge.exposeInMainWorld('clipboardAPI', clipboardAPI);
 
-export interface MenuAPI {
-  onToggleHistory(callback: (visible: boolean) => void): () => void;
-  onTogglePromptTool(callback: () => void): () => void;
-  onToggleWorkspace(callback: (visible: boolean) => void): () => void;
+export interface WindowAPI {
+  reload(): Promise<void>;
+  toggleDevTools(): Promise<void>;
+  zoomIn(): Promise<void>;
+  zoomOut(): Promise<void>;
+  zoomReset(): Promise<void>;
+  quit(): Promise<void>;
+  copy(): Promise<void>;
+  paste(): Promise<void>;
+  selectAll(): Promise<void>;
 }
 
-const menuAPI: MenuAPI = {
-  onToggleHistory: (callback) => {
-    const handler = (_event: any, visible: boolean) => callback(visible);
-    ipcRenderer.on('menu:toggle-history', handler);
-    return () => ipcRenderer.removeListener('menu:toggle-history', handler);
-  },
-  onTogglePromptTool: (callback) => {
-    const handler = () => callback();
-    ipcRenderer.on('menu:toggle-prompt-tool', handler);
-    return () => ipcRenderer.removeListener('menu:toggle-prompt-tool', handler);
-  },
-  onToggleWorkspace: (callback) => {
-    const handler = (_event: any, visible: boolean) => callback(visible);
-    ipcRenderer.on('menu:toggle-workspace', handler);
-    return () => ipcRenderer.removeListener('menu:toggle-workspace', handler);
-  },
+const windowAPI: WindowAPI = {
+  reload: () => ipcRenderer.invoke('window:reload'),
+  toggleDevTools: () => ipcRenderer.invoke('window:toggleDevTools'),
+  zoomIn: () => ipcRenderer.invoke('window:zoomIn'),
+  zoomOut: () => ipcRenderer.invoke('window:zoomOut'),
+  zoomReset: () => ipcRenderer.invoke('window:zoomReset'),
+  quit: () => ipcRenderer.invoke('app:quit'),
+  copy: () => ipcRenderer.invoke('window:copy'),
+  paste: () => ipcRenderer.invoke('window:paste'),
+  selectAll: () => ipcRenderer.invoke('window:selectAll'),
 };
 
-contextBridge.exposeInMainWorld('menuAPI', menuAPI);
+contextBridge.exposeInMainWorld('windowAPI', windowAPI);
 
 export interface PromptAPI {
   getAll(): Promise<any[]>;
@@ -169,13 +169,11 @@ contextBridge.exposeInMainWorld('promptAPI', promptAPI);
 export interface SessionPersistenceAPI {
   load(): Promise<{ tabs: Array<{ title: string; shell: string; cwd?: string }>; activeTabIndex: number; workspaceVisible: boolean; historyVisible: boolean }>;
   save(state: { tabs: Array<{ title: string; shell: string; cwd?: string }>; activeTabIndex: number; workspaceVisible: boolean; historyVisible: boolean }): Promise<void>;
-  syncHistory(visible: boolean): Promise<void>;
 }
 
 const sessionPersistenceAPI: SessionPersistenceAPI = {
   load: () => ipcRenderer.invoke('persistence:loadState'),
   save: (state) => ipcRenderer.invoke('persistence:saveState', state),
-  syncHistory: (visible) => ipcRenderer.invoke('menu:syncHistoryVisible', visible),
 };
 
 contextBridge.exposeInMainWorld('sessionPersistenceAPI', sessionPersistenceAPI);
