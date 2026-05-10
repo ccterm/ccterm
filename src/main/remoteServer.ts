@@ -6,7 +6,7 @@ import * as fs from 'fs';
 import { BrowserWindow, ipcMain } from 'electron';
 import { getWorkspaceFolders } from './workspace';
 import { loadHistory } from './history';
-import { getSessionCwd, getSessionMap } from './shell';
+import { getSessionMap } from './shell';
 
 interface PendingCommand {
   id: string;
@@ -76,24 +76,20 @@ export function getRemoteToken(): string {
 
 export function getAllSessions(): Array<{ id: string; tabTitle: string; cwd: string }> {
   const list: Array<{ id: string; tabTitle: string; cwd: string }> = [];
-  const seen = new Set<string>();
-  // Include sessions that have pushed snapshots
-  for (const [id, s] of sessions) {
-    seen.add(id);
+  const shellMap = getSessionMap();
+  // Only return live shell sessions — shell map is the source of truth
+  for (const [id, shellSession] of shellMap) {
+    const ss = sessions.get(id);
     list.push({
       id,
-      tabTitle: s.snapshot?.tabTitle || id,
-      cwd: s.snapshot?.cwd || getSessionCwd(id),
+      tabTitle: ss?.snapshot?.tabTitle || 'Terminal',
+      cwd: ss?.snapshot?.cwd || shellSession.cwd || '',
     });
   }
-  // Include shell sessions that haven't pushed snapshots yet
-  for (const [id] of getSessionMap()) {
-    if (!seen.has(id)) {
-      list.push({
-        id,
-        tabTitle: id,
-        cwd: getSessionCwd(id),
-      });
+  // Clean up dead sessions from the snapshot map
+  for (const id of sessions.keys()) {
+    if (!shellMap.has(id)) {
+      sessions.delete(id);
     }
   }
   return list;
