@@ -1,0 +1,394 @@
+.settings-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #1e1e1e;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: #2d2d2d;
+  border-bottom: 1px solid #454545;
+}
+
+.settings-header h1 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.settings-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.settings-sidebar {
+  width: 220px;
+  background: #252525;
+  border-right: 1px solid #333;
+  padding: 8px 0;
+  overflow-y: auto;
+}
+
+.settings-sidebar-group {
+  padding: 4px 0;
+}
+
+.settings-sidebar-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #666;
+  padding: 8px 16px 4px;
+}
+
+.settings-nav-item {
+  padding: 6px 16px;
+  font-size: 13px;
+  color: #ccc;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.settings-nav-item:hover {
+  background: #333;
+  color: #fff;
+}
+
+.settings-nav-item.active {
+  background: #094771;
+  color: #fff;
+}
+
+.settings-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px;
+}
+
+.settings-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #888;
+  font-size: 14px;
+}
+
+/* Section Styles */
+.settings-section {
+  max-width: 700px;
+}
+
+.settings-heading {
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 20px;
+}
+
+.settings-hint {
+  color: #888;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.settings-group {
+  margin-bottom: 24px;
+}
+
+.settings-group h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #333;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  padding: 6px 0;
+  gap: 12px;
+}
+
+.settings-row > span:first-child {
+  flex: 1;
+  font-size: 13px;
+  color: #ccc;
+}
+
+.settings-row input[type="text"],
+.settings-row input[type="number"],
+.settings-row select {
+  width: 240px;
+  padding: 4px 8px;
+  background: #0c0c0c;
+  border: 1px solid #454545;
+  border-radius: 4px;
+  color: #ddd;
+  font-size: 13px;
+  outline: none;
+}
+
+.settings-row input[type="text"]:focus,
+.settings-row input[type="number"]:focus,
+.settings-row select:focus {
+  border-color: #0078d4;
+}
+
+.settings-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.settings-row input[type="color"] {
+  width: 32px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #454545;
+  border-radius: 4px;
+  cursor: pointer;
+  background: none;
+}
+
+.settings-row input[type="range"] {
+  width: 160px;
+  cursor: pointer;
+}
+
+.settings-value {
+  font-size: 12px;
+  color: #999;
+  min-width: 40px;
+}
+
+.settings-btn {
+  padding: 6px 16px;
+  font-size: 13px;
+  background: #333;
+  color: #ccc;
+  border: 1px solid #454545;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.settings-btn:hover {
+  background: #444;
+  color: #fff;
+}
+
+.settings-btn.primary {
+  background: #0078d4;
+  border-color: #0078d4;
+  color: #fff;
+}
+
+.settings-btn.primary:hover {
+  background: #1a8ae8;
+}
+
+/* Color Scheme */
+.scheme-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.scheme-item {
+  padding: 8px 12px;
+  background: #252525;
+  border: 1px solid #333;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.scheme-item:hover,
+.scheme-item.active {
+  border-color: #0078d4;
+}
+
+.scheme-item-name {
+  font-size: 12px;
+  color: #ccc;
+  margin-bottom: 4px;
+}
+
+.color-preview-row {
+  display: flex;
+  gap: 2px;
+}
+
+.color-swatch {
+  width: 16px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.color-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: #1a1a1a;
+  border-radius: 4px;
+}
+
+.color-field span {
+  font-size: 11px;
+  color: #999;
+  flex: 1;
+}
+
+.color-field input[type="color"] {
+  width: 28px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid #454545;
+  border-radius: 3px;
+  cursor: pointer;
+  background: none;
+}
+
+/* About */
+.about-card {
+  max-width: 500px;
+}
+
+.about-logo {
+  margin-bottom: 12px;
+}
+
+.about-name {
+  font-size: 22px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.about-version {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 12px;
+}
+
+.about-desc {
+  font-size: 13px;
+  color: #aaa;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.about-info {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 20px;
+}
+
+.about-info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.about-info-row span:first-child {
+  color: #888;
+}
+
+.about-info-row span:last-child {
+  color: #ccc;
+}
+
+.about-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Keybinding */
+.keybind-list {
+  max-width: 600px;
+}
+
+.keybind-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid #333;
+}
+
+.keybind-row:hover {
+  background: #1a1a1a;
+}
+
+.keybind-action {
+  font-size: 13px;
+  color: #ccc;
+}
+
+.keybind-keys {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-family: monospace;
+  background: #0c0c0c;
+  border: 1px solid #454545;
+  border-radius: 4px;
+  color: #ddd;
+  cursor: pointer;
+  min-width: 120px;
+  text-align: center;
+  transition: border-color 0.15s;
+}
+
+.keybind-keys:hover {
+  border-color: #0078d4;
+}
+
+.keybind-keys.recording {
+  border-color: #4ec9b0;
+  color: #4ec9b0;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

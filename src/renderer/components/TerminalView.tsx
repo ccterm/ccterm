@@ -1,0 +1,198 @@
+import React, { useEffect, useRef } from 'react';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import { WebglAddon } from '@xterm/addon-webgl';
+import { SearchAddon } from '@xterm/addon-search';
+import { Unicode11Addon } from '@xterm/addon-unicode11';
+import { WebLinksAddon } from '@xterm/addon-web-links';
+import { useTabStore } from '../store/tabStore';
+import { useSearchStore } from '../store/searchStore';
+import { useProfile, useScheme } from '../hooks/useProfile';
+import { useCommandCapture } from '../hooks/useCommandCapture';
+import '@xterm/xterm/css/xterm.css';
+import '../styles/terminal.css';
+
+interface TerminalViewProps {
+  tabId: string;
+  sessionId: string;
+  onReady?: () => void;
+}
+
+const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const termRef = useRef<HTMLDivElement>(null);
+  const updateTabTitle = useTabStore((s) => s.updateTabTitle);
+  const registerAddon = useSearchStore((s) => s.registerAddon);
+  const unregisterAddon = useSearchStore((s) => s.unregisterAddon);
+  const profile = useProfile();
+  const scheme = useScheme(profile.colorScheme);
+
+  const { handleInput: captureInput } = useCommandCapture(sessionId);
+
+  // Apply visual effects
+  useEffect(() => {
+    if (!termRef.current) return;
+    const el = termRef.current;
+    el.style.opacity = String(profile.opacity);
+    if (profile.backgroundImage) {
+      el.style.backgroundImage = `url(${profile.backgroundImage})`;
+      el.style.backgroundSize = profile.backgroundImageStretchMode;
+      el.style.backgroundPosition = 'center';
+      el.style.backgroundRepeat = 'no-repeat';
+    } else {
+      el.style.backgroundImage = 'none';
+    }
+  }, [profile.opacity, profile.backgroundImage, profile.backgroundImageStretchMode]);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const term = new Terminal({
+      cursorBlink: true,
+      allowProposedApi: true,
+      cursorStyle: profile.cursorShape,
+      cursorWidth: profile.cursorShape === 'bar' ? 2 : undefined,
+      fontSize: profile.fontSize,
+      fontFamily: `'${profile.fontFace}', 'Cascadia Code', 'Fira Code', 'Consolas', monospace`,
+      allowTransparency: profile.opacity < 1,
+      scrollback: profile.scrollbackLines,
+      theme: {
+        background: scheme.background,
+        foreground: scheme.foreground,
+        cursor: profile.cursorColor || scheme.cursor,
+        selectionBackground: scheme.selectionBackground,
+        black: scheme.black, red: scheme.red,
+        green: scheme.green, yellow: scheme.yellow,
+        blue: scheme.blue, magenta: scheme.magenta,
+        cyan: scheme.cyan, white: scheme.white,
+        brightBlack: scheme.brightBlack,
+        brightRed: scheme.brightRed,
+        brightGreen: scheme.brightGreen,
+        brightYellow: scheme.brightYellow,
+        brightBlue: scheme.brightBlue,
+        brightMagenta: scheme.brightMagenta,
+        brightCyan: scheme.brightCyan,
+        brightWhite: scheme.brightWhite,
+      },
+    });
+
+    // Unicode 11 support (emoji + CJK)
+    term.loadAddon(new Unicode11Addon());
+    term.unicode.activeVersion = '11';
+
+    // Fit addon
+    const fitAddon = new FitAddon();
+    term.loadAddon(fitAddon);
+
+    // Search addon
+    const searchAddon = new SearchAddon();
+    term.loadAddon(searchAddon);
+    registerAddon(sessionId, searchAddon);
+
+    // Web links addon (clickable URLs)
+    term.loadAddon(new WebLinksAddon((event, uri) => {
+      window.appAPI.openExternal(uri);
+    }));
+
+    // WebGL addon for GPU acceleration
+    try {
+      const webglAddon = new WebglAddon();
+      term.loadAddon(webglAddon);
+    } catch {
+      // WebGL not available
+    }
+
+    term.open(containerRef.current);
+    fitAddon.fit();
+
+    // Create shell session
+    window.shellAPI.create(sessionId).then(({ pid, shell }) => {
+      updateTabTitle(tabId, basename(shell));
+      term.writeln(`\x1b[32mHuffman Terminal\x1b[0m - PID: ${pid}`);
+      term.writeln('');
+      onReady?.();
+    }).catch((err: Error) => {
+      term.writeln(`\r\n\x1b[31mFailed to start shell:\x1b[0m ${err.message}`);
+      term.writeln('Check your shell configuration in Settings.');
+    });
+
+    // Shell data -> terminal
+    const unsubData = window.shellAPI.onData(sessionId, (data) => {
+      term.write(data);
+    });
+
+    // Terminal input -> shell
+    const unsubKey = term.onData((data) => {
+      captureInput(data);
+      window.shellAPI.write(sessionId, data);
+    });
+
+    // Handle resize
+    const onResize = () => {
+      try {
+        fitAddon.fit();
+        const dims = fitAddon.proposeDimensions();
+        if (dims) {
+          window.shellAPI.resize(sessionId, dims.cols, dims.rows);
+        }
+      } catch { /* ignore */ }
+    };
+    window.addEventListener('resize', onResize);
+
+    // Shell exit handling
+    const unsubExit = window.shellAPI.onExit(sessionId, (code) => {
+      term.writeln(`\r\n\x1b[33m[Process completed (exit code: ${code})]\x1b[0m`);
+    });
+
+    // File drag & drop
+    const dragHandler = (e: DragEvent) => {
+      e.preventDefault();
+      if (e.dataTransfer?.files.length) {
+        const paths = Array.from(e.dataTransfer.files)
+          .map((f) => {
+            const p = f.path || f.name;
+            return p.includes(' ') ? `"${p}"` : p;
+          })
+          .join(' ');
+        term.write(paths + ' ');
+      }
+    };
+    containerRef.current.addEventListener('drop', dragHandler);
+
+    // Prevent default drag behavior
+    const preventDrag = (e: DragEvent) => e.preventDefault();
+    containerRef.current.addEventListener('dragover', preventDrag);
+
+    return () => {
+      unsubData();
+      unsubKey.dispose();
+      unsubExit();
+      window.removeEventListener('resize', onResize);
+      unregisterAddon(sessionId);
+      if (containerRef.current) {
+        containerRef.current.removeEventListener('drop', dragHandler);
+        containerRef.current.removeEventListener('dragover', preventDrag);
+      }
+      window.shellAPI.kill(sessionId);
+      term.dispose();
+    };
+  }, [sessionId, tabId, updateTabTitle, onReady, registerAddon, unregisterAddon,
+      profile.fontSize, profile.fontFace, profile.cursorShape, profile.cursorColor,
+      profile.scrollbackLines, profile.opacity, scheme]);
+
+  return (
+    <div
+      ref={termRef}
+      className="terminal-view"
+      style={{ background: scheme.background }}
+    >
+      <div className="terminal-container" ref={containerRef} />
+    </div>
+  );
+};
+
+function basename(p: string): string {
+  return p.split(/[\\/]/).pop() || p;
+}
+
+export default TerminalView;
