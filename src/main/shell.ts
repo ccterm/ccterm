@@ -68,9 +68,11 @@ export function setupShellHandlers(): void {
         rows: 24,
         cwd,
         env,
+        // WinPTY is more stable than ConPTY on some Windows builds
+        useConpty: process.platform === 'win32' ? false : undefined,
       });
     } catch (err) {
-      console.error('[Huffman] Failed to spawn shell:', shellPath, err);
+      console.error('[CCTerm] Failed to spawn shell:', shellPath, err);
       throw new Error(`Failed to start ${shellPath}: ${(err as Error).message}`);
     }
 
@@ -98,7 +100,7 @@ export function setupShellHandlers(): void {
     });
 
     sessions.set(sessionId, { pty, pid: pty.pid });
-    console.log('[Huffman] Shell started:', shellPath, 'PID:', pty.pid);
+    console.log('[CCTerm] Shell started:', shellPath, 'PID:', pty.pid);
 
     return { pid: pty.pid, shell: shellPath };
   });

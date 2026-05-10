@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, clipboard, ipcMain } from 'electron';
 import { setupShellHandlers } from './shell';
 import { setupConfigHandlers } from './config';
 import { setupSessionHandlers } from './session';
@@ -9,6 +9,14 @@ import { setupHistoryHandlers } from './history';
 ipcMain.handle('shell:openExternal', (_event, url: string) => {
   const { shell } = require('electron');
   shell.openExternal(url);
+});
+
+ipcMain.handle('clipboard:write', (_event, text: string) => {
+  clipboard.writeText(text);
+});
+
+ipcMain.handle('clipboard:read', () => {
+  return clipboard.readText();
 });
 
 app.whenReady().then(() => {

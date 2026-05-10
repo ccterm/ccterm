@@ -14,7 +14,7 @@ export function createTerminalWindow(): BrowserWindow {
     height: 800,
     minWidth: 600,
     minHeight: 400,
-    title: 'Huffman Terminal',
+    title: 'CCTerm Terminal',
     backgroundColor: '#0c0c0c',
     show: false,
     webPreferences: {
@@ -26,9 +26,9 @@ export function createTerminalWindow(): BrowserWindow {
   });
 
   const indexPath = path.join(__dirname, '..', 'renderer', 'index.html');
-  console.log('[Huffman] Loading renderer from:', indexPath);
+  console.log('[CCTerm] Loading renderer from:', indexPath);
   win.loadFile(indexPath).catch((err: Error) => {
-    console.error('[Huffman] Failed to load renderer:', err.message);
+    console.error('[CCTerm] Failed to load renderer:', err.message);
   });
 
   win.once('ready-to-show', () => {
@@ -43,7 +43,7 @@ export function createTerminalWindow(): BrowserWindow {
   // Update title based on active tab
   ipcMain.on(`window:setTitle:${windowId}`, (_event, title: string) => {
     if (!win.isDestroyed()) {
-      win.setTitle(title ? `${title} - Huffman Terminal` : 'Huffman Terminal');
+      win.setTitle(title ? `${title} - CCTerm Terminal` : 'CCTerm Terminal');
     }
   });
 

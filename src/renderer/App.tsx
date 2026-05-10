@@ -28,13 +28,13 @@ const App: React.FC = () => {
 
   // Create initial tab on mount (no IPC race condition)
   useEffect(() => {
-    console.log('[Huffman] Initial tab creation check:', { tabsLength: tabs.length, alreadyCreated: initialTabCreated.current });
+    console.log('[CCTerm] Initial tab creation check:', { tabsLength: tabs.length, alreadyCreated: initialTabCreated.current });
     if (!initialTabCreated.current && tabs.length === 0) {
       initialTabCreated.current = true;
-      console.log('[Huffman] Creating initial tab');
+      console.log('[CCTerm] Creating initial tab');
       const tab = addTab({ title: 'Terminal' });
       initRoot(tab.id);
-      console.log('[Huffman] Initial tab created:', tab.id);
+      console.log('[CCTerm] Initial tab created:', tab.id);
     }
   }, [addTab, initRoot, tabs.length]);
 

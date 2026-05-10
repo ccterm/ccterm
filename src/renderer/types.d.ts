@@ -1,4 +1,4 @@
-import type { ShellAPI, ConfigAPI, SessionAPI, HistoryAPI } from '../preload/index';
+import type { ShellAPI, ConfigAPI, SessionAPI, HistoryAPI, ClipboardAPI } from '../preload/index';
 
 declare global {
   interface Window {
@@ -6,6 +6,7 @@ declare global {
     configAPI: ConfigAPI;
     sessionAPI: SessionAPI;
     historyAPI: HistoryAPI;
+    clipboardAPI: ClipboardAPI;
     appAPI: {
       onReady: (callback: (windowId?: string) => void) => void;
       openExternal: (url: string) => void;

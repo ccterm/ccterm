@@ -20,7 +20,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('[Huffman] Terminal error:', error.message, info.componentStack);
+    console.error('[CCTerm] Terminal error:', error.message, info.componentStack);
   }
 
   render() {

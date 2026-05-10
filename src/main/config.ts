@@ -136,7 +136,7 @@ export function setupConfigHandlers(): void {
     }
 
     const result = await dialog.showSaveDialog({
-      defaultPath: `huffman-${scope || 'settings'}-${Date.now()}.json`,
+      defaultPath: `ccterm-${scope || 'settings'}-${Date.now()}.json`,
       filters: [{ name: 'JSON', extensions: ['json'] }],
     });
 

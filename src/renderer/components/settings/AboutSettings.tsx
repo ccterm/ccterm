@@ -15,7 +15,7 @@ const AboutSettings: React.FC = () => {
             <path d="M18 20l-4 4 4 4M30 20l4 4-4 4" stroke="#0078d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        <h3 className="about-name">Huffman Terminal</h3>
+        <h3 className="about-name">CCTerm Terminal</h3>
         <p className="about-version">Version 1.0.0</p>
         <p className="about-desc">
           A modern terminal emulator inspired by Windows Terminal.

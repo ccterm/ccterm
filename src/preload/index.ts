@@ -87,6 +87,18 @@ contextBridge.exposeInMainWorld('configAPI', configAPI);
 contextBridge.exposeInMainWorld('sessionAPI', sessionAPI);
 contextBridge.exposeInMainWorld('historyAPI', historyAPI);
 
+export interface ClipboardAPI {
+  write(text: string): Promise<void>;
+  read(): Promise<string>;
+}
+
+const clipboardAPI: ClipboardAPI = {
+  write: (text) => ipcRenderer.invoke('clipboard:write', text),
+  read: () => ipcRenderer.invoke('clipboard:read'),
+};
+
+contextBridge.exposeInMainWorld('clipboardAPI', clipboardAPI);
+
 contextBridge.exposeInMainWorld('appAPI', {
   onReady: (callback: (windowId?: string) => void) => {
     ipcRenderer.on('terminal-ready', (_event, windowId) => callback(windowId));

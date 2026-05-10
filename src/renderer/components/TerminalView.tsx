@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
@@ -21,6 +21,14 @@ interface TerminalViewProps {
 const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<HTMLDivElement>(null);
+  const termInstanceRef = useRef<Terminal | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuState, setMenuState] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    hasSelection: boolean;
+  }>({ visible: false, x: 0, y: 0, hasSelection: false });
   const updateTabTitle = useTabStore((s) => s.updateTabTitle);
   const registerAddon = useSearchStore((s) => s.registerAddon);
   const unregisterAddon = useSearchStore((s) => s.unregisterAddon);
@@ -103,12 +111,13 @@ const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }
     }
 
     term.open(containerRef.current);
+    termInstanceRef.current = term;
     fitAddon.fit();
 
     // Create shell session
     window.shellAPI.create(sessionId).then(({ pid, shell }) => {
       updateTabTitle(tabId, basename(shell));
-      term.writeln(`\x1b[32mHuffman Terminal\x1b[0m - PID: ${pid}`);
+      term.writeln(`\x1b[32mCCTerm Super Terminal\x1b[0m - PID: ${pid}`);
       term.writeln('');
       onReady?.();
     }).catch((err: Error) => {
@@ -163,6 +172,19 @@ const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }
     const preventDrag = (e: DragEvent) => e.preventDefault();
     containerRef.current.addEventListener('dragover', preventDrag);
 
+    // Right-click context menu
+    const onContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      const selection = term.getSelection();
+      setMenuState({
+        visible: true,
+        x: e.clientX,
+        y: e.clientY,
+        hasSelection: selection.length > 0,
+      });
+    };
+    containerRef.current.addEventListener('contextmenu', onContextMenu);
+
     return () => {
       unsubData();
       unsubKey.dispose();
@@ -172,13 +194,54 @@ const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }
       if (containerRef.current) {
         containerRef.current.removeEventListener('drop', dragHandler);
         containerRef.current.removeEventListener('dragover', preventDrag);
+        containerRef.current.removeEventListener('contextmenu', onContextMenu);
       }
       window.shellAPI.kill(sessionId);
+      termInstanceRef.current = null;
       term.dispose();
     };
   }, [sessionId, tabId, updateTabTitle, onReady, registerAddon, unregisterAddon,
       profile.fontSize, profile.fontFace, profile.cursorShape, profile.cursorColor,
       profile.scrollbackLines, profile.opacity, scheme]);
+
+  // Close context menu on click outside
+  useEffect(() => {
+    const closeMenu = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuState((s) => ({ ...s, visible: false }));
+      }
+    };
+    if (menuState.visible) {
+      window.addEventListener('click', closeMenu);
+    }
+    return () => window.removeEventListener('click', closeMenu);
+  }, [menuState.visible]);
+
+  const handleCopy = useCallback(async () => {
+    const term = termInstanceRef.current;
+    if (!term) return;
+    const selection = term.getSelection();
+    if (selection) {
+      await window.clipboardAPI.write(selection);
+    }
+    setMenuState((s) => ({ ...s, visible: false }));
+    term.focus();
+  }, []);
+
+  const handlePaste = useCallback(async () => {
+    const term = termInstanceRef.current;
+    if (!term) return;
+    try {
+      const text = await window.clipboardAPI.read();
+      if (text) {
+        window.shellAPI.write(sessionId, text);
+      }
+    } catch {
+      // clipboard read failed (e.g. no text content)
+    }
+    setMenuState((s) => ({ ...s, visible: false }));
+    term.focus();
+  }, [sessionId]);
 
   return (
     <div
@@ -187,6 +250,28 @@ const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }
       style={{ background: scheme.background }}
     >
       <div className="terminal-container" ref={containerRef} />
+      {menuState.visible && (
+        <div
+          ref={menuRef}
+          className="terminal-context-menu"
+          style={{ left: menuState.x, top: menuState.y }}
+        >
+          <div
+            className={`context-menu-item${menuState.hasSelection ? '' : ' disabled'}`}
+            onClick={menuState.hasSelection ? handleCopy : undefined}
+          >
+            <span>Copy</span>
+            <span className="context-menu-shortcut">Ctrl+Shift+C</span>
+          </div>
+          <div
+            className="context-menu-item"
+            onClick={handlePaste}
+          >
+            <span>Paste</span>
+            <span className="context-menu-shortcut">Ctrl+Shift+V</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

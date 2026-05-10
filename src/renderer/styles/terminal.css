@@ -68,3 +68,58 @@
   font-size: 13px;
   background: #1e1e1e;
 }
+
+/* Terminal context menu */
+.terminal-context-menu {
+  position: fixed;
+  background: #2d2d2d;
+  border: 1px solid #454545;
+  border-radius: 6px;
+  padding: 4px;
+  min-width: 160px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.terminal-context-menu .context-menu-item {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #ccc;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.terminal-context-menu .context-menu-item:hover {
+  background: #0078d4;
+  color: #fff;
+}
+
+.terminal-context-menu .context-menu-item.disabled {
+  color: #666;
+  cursor: default;
+}
+
+.terminal-context-menu .context-menu-item.disabled:hover {
+  background: transparent;
+  color: #666;
+}
+
+.terminal-context-menu .context-menu-shortcut {
+  color: #888;
+  font-size: 11px;
+}
+
+.terminal-context-menu .context-menu-item:hover .context-menu-shortcut {
+  color: #ccc;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: #454545;
+  margin: 4px 8px;
+}

@@ -1,6 +1,6 @@
 {
-  "name": "huffman-terminal",
-  "productName": "Huffman Terminal",
+  "name": "ccterm-terminal",
+  "productName": "CCTerm Super Terminal",
   "version": "1.0.0",
   "description": "A modern terminal emulator inspired by Windows Terminal",
   "main": "dist/main/index.js",
