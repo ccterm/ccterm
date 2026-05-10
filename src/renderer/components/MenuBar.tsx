@@ -252,16 +252,11 @@ const MenuBar: React.FC<MenuBarProps> = ({
           </svg>
         </button>
         <button
-          className="menubar-toolbar-btn"
+          className={`menubar-toolbar-btn shell-btn${defaultShellType === 'powershell' ? ' pt' : ' pt'}`}
           onClick={onTogglePromptTool}
           title="Prompt Tool (Ctrl+Alt+P)"
         >
-          <svg width="14" height="14" viewBox="0 0 14 14">
-            <rect x="2" y="2.5" width="10" height="9" rx="1" fill="none" stroke="currentColor" strokeWidth="1.1" />
-            <line x1="5" y1="5.5" x2="5" y2="8.5" stroke="currentColor" strokeWidth="1" />
-            <line x1="7" y1="4" x2="7" y2="10" stroke="currentColor" strokeWidth="1" />
-            <line x1="9" y1="5.5" x2="9" y2="8.5" stroke="currentColor" strokeWidth="1" />
-          </svg>
+          PT
         </button>
         <button
           className={`menubar-toolbar-btn shell-btn${defaultShellType === 'powershell' ? ' ps' : ' cmd'}`}

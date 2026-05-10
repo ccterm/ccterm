@@ -160,6 +160,12 @@
   font-family: 'Cascadia Code', 'Consolas', monospace;
   width: 30px;
 }
+.shell-btn.pt {
+  color: #e74856;
+}
+.shell-btn.pt:hover {
+  color: #e74856;
+}
 
 .shell-btn.ps {
   color: #0078d4;
