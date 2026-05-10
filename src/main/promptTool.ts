@@ -43,6 +43,10 @@ function generateId(): string {
   return `pt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+export function getAllPrompts(): PromptTemplate[] {
+  return loadStore().prompts;
+}
+
 export function setupPromptToolHandlers(): void {
   ipcMain.handle('prompt:getAll', () => {
     return loadStore().prompts;

@@ -7,6 +7,7 @@ import { BrowserWindow, ipcMain } from 'electron';
 import { getWorkspaceFolders } from './workspace';
 import { loadHistory } from './history';
 import { getSessionMap } from './shell';
+import { getAllPrompts } from './promptTool';
 
 interface PendingCommand {
   id: string;
@@ -248,6 +249,11 @@ export function startRemoteServer(port: number, authToken: string): Promise<numb
       }
       const limit = parseInt(req.query.limit as string) || 100;
       res.json(records.slice(0, limit));
+    });
+
+    // API: prompt templates
+    app.get('/api/prompts', (_req, res) => {
+      res.json(getAllPrompts());
     });
 
     // API: create new tab (phone → desktop)
