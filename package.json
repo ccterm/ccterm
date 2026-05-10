@@ -8,7 +8,7 @@
     "build": "webpack --config webpack.config.ts --mode development",
     "build:prod": "webpack --config webpack.config.ts --mode production",
     "start": "npm run build && electron .",
-    "postinstall": "cd node_modules/@homebridge/node-pty-prebuilt-multiarch && npx prebuild-install --runtime node --target 24.15.0 --download --arch x64 --platform win32 || true && patch-package",
+    "postinstall": "patch-package",
     "lint": "tsc --noEmit",
     "test": "echo \"No tests yet\" && exit 0"
   },
@@ -20,7 +20,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
+    "@lydell/node-pty": "^1.2.0-beta.12",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-search": "^0.16.0",
     "@xterm/addon-unicode11": "^0.9.0",

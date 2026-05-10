@@ -3,7 +3,7 @@ import HtmlWebpackPlugin from 'html-webpack-plugin';
 import type { Configuration } from 'webpack';
 
 const nativeModules = [
-  '@homebridge/node-pty-prebuilt-multiarch',
+  '@lydell/node-pty',
 ];
 
 const config: Configuration[] = [

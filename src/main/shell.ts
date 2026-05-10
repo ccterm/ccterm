@@ -1,11 +1,14 @@
 import { ipcMain, BrowserWindow } from 'electron';
-import { spawn, IPty } from '@homebridge/node-pty-prebuilt-multiarch';
+import { spawn, IPty } from '@lydell/node-pty';
 import * as os from 'os';
 import * as fs from 'fs';
 import * as path from 'path';
 
 function detectDefaultShell(): string {
   if (process.platform === 'win32') {
+    // Prefer PowerShell for better ConPTY compatibility
+    const pwsh = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+    if (fs.existsSync(pwsh)) return pwsh;
     return process.env.COMSPEC || 'cmd.exe';
   }
   const shell = process.env.SHELL;
@@ -54,22 +57,26 @@ export function setupShellHandlers(): void {
     const cwd = getDefaultCwd();
 
     // Filter env to only string values (avoid node-pty issues on Windows)
-    const env: Record<string, string> = { TERM: 'xterm-256color' };
+    const env: Record<string, string> = {};
+    if (process.platform !== 'win32') {
+      env.TERM = 'xterm-256color';
+    }
     for (const key of Object.keys(process.env)) {
       const val = process.env[key];
       if (val !== undefined) env[key] = val;
     }
 
+    const t0 = Date.now();
+    console.log('[CCTerm] Spawning shell:', shellPath, 'cwd:', cwd);
+
     let pty: IPty;
     try {
       pty = spawn(shellPath, shellArgs, {
-        name: 'xterm-256color',
+        name: process.platform === 'win32' ? 'ms-terminal' : 'xterm-256color',
         cols: 80,
         rows: 24,
         cwd,
         env,
-        // WinPTY is more stable than ConPTY on some Windows builds
-        useConpty: process.platform === 'win32' ? false : undefined,
       });
     } catch (err) {
       console.error('[CCTerm] Failed to spawn shell:', shellPath, err);
@@ -77,6 +84,8 @@ export function setupShellHandlers(): void {
     }
 
     pty.onData((data: string) => {
+      const elapsed = Date.now() - t0;
+      console.log('[CCTerm] Data +%dms: %d bytes', elapsed, data.length);
       const channel = `shell:data:${sessionId}`;
       BrowserWindow.getAllWindows().forEach((win) => {
         try {
@@ -88,6 +97,8 @@ export function setupShellHandlers(): void {
     });
 
     pty.onExit(({ exitCode }) => {
+      const elapsed = Date.now() - t0;
+      console.log('[CCTerm] Shell exit +%dms: code=%s, signal=%s', elapsed, exitCode, (pty as any)._signal);
       const channel = `shell:exit:${sessionId}`;
       BrowserWindow.getAllWindows().forEach((win) => {
         try {
@@ -99,8 +110,13 @@ export function setupShellHandlers(): void {
       sessions.delete(sessionId);
     });
 
+    pty.on('error', (err: Error) => {
+      const elapsed = Date.now() - t0;
+      console.error('[CCTerm] PTY error +%dms:', elapsed, err.message, err.stack);
+    });
+
     sessions.set(sessionId, { pty, pid: pty.pid });
-    console.log('[CCTerm] Shell started:', shellPath, 'PID:', pty.pid);
+    console.log('[CCTerm] Shell started:', shellPath, 'PID:', pty.pid, 'innerPid:', (pty as any)._innerPid);
 
     return { pid: pty.pid, shell: shellPath };
   });
