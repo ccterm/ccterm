@@ -198,6 +198,8 @@ export interface RemoteAPI {
   getLanIp(): Promise<string>;
   isRunning(): Promise<boolean>;
   toggle(): Promise<boolean>;
+  setActiveSession(sessionId: string): Promise<void>;
+  onActivateTab(callback: (sessionId: string) => void): () => void;
 }
 
 const remoteAPI: RemoteAPI = {
@@ -206,6 +208,15 @@ const remoteAPI: RemoteAPI = {
   getLanIp: () => ipcRenderer.invoke('remote:getLanIp'),
   isRunning: () => ipcRenderer.invoke('remote:isRunning'),
   toggle: () => ipcRenderer.invoke('remote:toggle'),
+  setActiveSession: (sessionId) => ipcRenderer.invoke('remote:setActiveSession', sessionId),
+  onActivateTab: (callback) => {
+    const handler = (_event: any, sessionId: string) => {
+      console.log('[preload] remote:activateTab received:', sessionId);
+      callback(sessionId);
+    };
+    ipcRenderer.on('remote:activateTab', handler);
+    return () => ipcRenderer.removeListener('remote:activateTab', handler);
+  },
 };
 
 contextBridge.exposeInMainWorld('remoteAPI', remoteAPI);

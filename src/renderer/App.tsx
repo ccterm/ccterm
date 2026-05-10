@@ -119,6 +119,30 @@ const App: React.FC = () => {
     window.sessionPersistenceAPI.save(state);
   }, [tabs, activeTabId, wsVisible, showHistory]);
 
+  // Push active tab change to remote server (for phone sync)
+  useEffect(() => {
+    if (!sessionLoaded.current || !activeTabId) return;
+    const tab = tabs.find(t => t.id === activeTabId);
+    if (tab?.sessionId) {
+      window.remoteAPI.setActiveSession(tab.sessionId);
+    }
+  }, [activeTabId, tabs]);
+
+  // Listen for phone-initiated tab switches
+  useEffect(() => {
+    const unsub = window.remoteAPI.onActivateTab((sessionId: string) => {
+      console.log('[App] onActivateTab callback received:', sessionId);
+      const store = useTabStore.getState();
+      console.log('[App] tabs:', store.tabs.map(t => ({ id: t.id, sessionId: t.sessionId, title: t.title })));
+      const tab = store.tabs.find(t => t.sessionId === sessionId);
+      console.log('[App] matched tab:', tab);
+      if (tab) {
+        store.setActiveTab(tab.id);
+      }
+    });
+    return unsub;
+  }, []);
+
   const openSettings = useCallback(() => setShowSettings(true), []);
   const closeSettings = useCallback(() => setShowSettings(false), []);
 

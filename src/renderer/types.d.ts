@@ -9,7 +9,7 @@ declare global {
     clipboardAPI: ClipboardAPI;
     windowAPI: WindowAPI;
     promptAPI: PromptAPI;
-    remoteAPI: RemoteAPI;
+    remoteAPI: RemoteAPI & { setActiveSession(sessionId: string): Promise<void>; onActivateTab(callback: (sessionId: string) => void): () => void; };
     workspaceAPI: WorkspaceAPI;
     sessionPersistenceAPI: SessionPersistenceAPI;
     appAPI: {

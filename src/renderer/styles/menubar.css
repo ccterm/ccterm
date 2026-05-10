@@ -1,0 +1,185 @@
+.menubar {
+  display: flex;
+  align-items: center;
+  height: 30px;
+  background: #1f1f1f;
+  border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0;
+  padding: 0 4px;
+  user-select: none;
+  -webkit-app-region: no-drag;
+}
+
+.menubar-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+}
+
+.menubar-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.menubar-dropdown {
+  position: relative;
+  height: 100%;
+}
+
+.menubar-item {
+  height: 100%;
+  padding: 0 10px;
+  font-size: 12px;
+  font-family: -apple-system, 'Segoe UI', sans-serif;
+  color: #ccc;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
+}
+
+.menubar-item:hover,
+.menubar-item.open {
+  background: #333;
+  color: #fff;
+}
+
+/* Dropdown menu */
+.menubar-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 210px;
+  background: #2d2d2d;
+  border: 1px solid #454545;
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  z-index: 5000;
+}
+
+.menubar-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-family: -apple-system, 'Segoe UI', sans-serif;
+  color: #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+}
+
+.menubar-menu-item:hover {
+  background: #0078d4;
+  color: #fff;
+}
+
+.menubar-menu-item.has-sub {
+  padding-right: 8px;
+}
+
+.menubar-menu-arrow {
+  font-size: 8px;
+  margin-left: 12px;
+  opacity: 0.6;
+}
+
+.menubar-shortcut {
+  font-size: 11px;
+  color: #666;
+  margin-left: 24px;
+}
+
+.menubar-menu-item:hover .menubar-shortcut {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.menubar-separator {
+  height: 1px;
+  background: #454545;
+  margin: 4px 0;
+}
+
+/* Submenu (e.g. Default Shell) */
+.menubar-submenu {
+  position: absolute;
+  left: 100%;
+  top: -4px;
+  min-width: 170px;
+  background: #2d2d2d;
+  border: 1px solid #454545;
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.menubar-menu-item.checked {
+  color: #fff;
+}
+
+/* Toolbar buttons */
+.menubar-toolbar-btn {
+  width: 26px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #999;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.menubar-toolbar-btn:hover {
+  background: #333;
+  color: #fff;
+}
+
+.menubar-toolbar-btn.active {
+  color: #0078d4;
+}
+
+.menubar-toolbar-btn.active:hover {
+  color: #1a8ad4;
+}
+
+/* Shell toggle button */
+.shell-btn {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  width: 30px;
+}
+
+.shell-btn.ps {
+  color: #0078d4;
+}
+
+.shell-btn.ps:hover {
+  color: #1a8ad4;
+}
+
+.shell-btn.cmd {
+  color: #16c60c;
+}
+
+.shell-btn.cmd:hover {
+  color: #2be62b;
+}
+
+.menubar-toolbar-sep {
+  width: 1px;
+  height: 16px;
+  background: #3a3a3a;
+  margin: 0 4px;
+}
