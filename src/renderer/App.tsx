@@ -53,15 +53,50 @@ const App: React.FC = () => {
 
   // Listen for remote tab creation from phone
   useEffect(() => {
-    const unsub = window.appAPI.onRemoteCreateTab((shellType: string) => {
+    const unsub = window.appAPI.onRemoteCreateTab((shellType: string, cwd?: string) => {
       const title = shellType === 'cmd' ? 'CMD' : 'PowerShell';
-      const cwd = activeFolder || undefined;
-      const tab = addTab({ title, shell: shellType, cwd });
+      const dir = cwd || activeFolder || undefined;
+      const tab = addTab({ title, shell: shellType, cwd: dir });
       initRoot(tab.id);
       useTabStore.getState().setActiveTab(tab.id);
     });
     return unsub;
   }, [addTab, initRoot, activeFolder]);
+
+  // Listen for remote tab activation from phone
+  useEffect(() => {
+    const unsub = window.appAPI.onRemoteActivateTab((sessionId: string) => {
+      const roots = usePaneStore.getState().roots;
+      for (const [tabId, root] of Object.entries(roots)) {
+        function hasSession(node: import('./store/paneStore').PaneNode): boolean {
+          if (node.type === 'terminal') return node.sessionId === sessionId;
+          return node.children.some(hasSession);
+        }
+        if (hasSession(root)) {
+          useTabStore.getState().setActiveTab(tabId);
+          break;
+        }
+      }
+    });
+    return unsub;
+  }, []);
+
+  // Listen for remote workspace folder activation from phone
+  useEffect(() => {
+    const unsub = window.appAPI.onRemoteActivateWorkspace((folder: string) => {
+      useWorkspaceStore.getState().setActiveFolder(folder);
+      const nf = folder.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+      const tabs = useTabStore.getState().tabs;
+      const match = tabs.find(t => {
+        const tcwd = (t.cwd || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+        return tcwd.startsWith(nf);
+      });
+      if (match) {
+        useTabStore.getState().setActiveTab(match.id);
+      }
+    });
+    return unsub;
+  }, []);
 
   const createDefaultTab = useCallback(() => {
     const title = defaultShellType === 'cmd' ? 'CMD' : 'PowerShell';
@@ -121,26 +156,49 @@ const App: React.FC = () => {
 
   // Push active tab change to remote server (for phone sync)
   useEffect(() => {
-    if (!sessionLoaded.current || !activeTabId) return;
-    const tab = tabs.find(t => t.id === activeTabId);
-    if (tab?.sessionId) {
-      window.remoteAPI.setActiveSession(tab.sessionId);
+    if (!activeTabId) return;
+    const root = usePaneStore.getState().roots[activeTabId];
+    if (!root) return;
+    const focusedId = usePaneStore.getState().focusedPaneId;
+    function findPaneSession(node: import('./store/paneStore').PaneNode): string {
+      if (node.type === 'terminal') {
+        if (!focusedId || node.id === focusedId) return node.sessionId;
+        return '';
+      }
+      for (const c of node.children) {
+        const r = findPaneSession(c);
+        if (r) return r;
+      }
+      return '';
+    }
+    const paneSessionId = findPaneSession(root);
+    if (paneSessionId) {
+      window.remoteAPI.setActiveSession(paneSessionId);
     }
   }, [activeTabId, tabs]);
 
-  // Listen for phone-initiated tab switches
+  // Poll server for phone-initiated tab switches
   useEffect(() => {
-    const unsub = window.remoteAPI.onActivateTab((sessionId: string) => {
-      console.log('[App] onActivateTab callback received:', sessionId);
-      const store = useTabStore.getState();
-      console.log('[App] tabs:', store.tabs.map(t => ({ id: t.id, sessionId: t.sessionId, title: t.title })));
-      const tab = store.tabs.find(t => t.sessionId === sessionId);
-      console.log('[App] matched tab:', tab);
-      if (tab) {
-        store.setActiveTab(tab.id);
+    let lastSessionId = '';
+    const interval = setInterval(async () => {
+      const sessionId = await window.remoteAPI.getActiveSession();
+      if (sessionId && sessionId !== lastSessionId) {
+        lastSessionId = sessionId;
+        // Find tab whose pane has this sessionId (paneStore format, not tabStore)
+        const roots = usePaneStore.getState().roots;
+        for (const [tabId, root] of Object.entries(roots)) {
+          function hasSession(node: import('./store/paneStore').PaneNode): boolean {
+            if (node.type === 'terminal') return node.sessionId === sessionId;
+            return node.children.some(hasSession);
+          }
+          if (hasSession(root)) {
+            useTabStore.getState().setActiveTab(tabId);
+            break;
+          }
+        }
       }
-    });
-    return unsub;
+    }, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const openSettings = useCallback(() => setShowSettings(true), []);

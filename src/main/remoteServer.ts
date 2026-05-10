@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import { BrowserWindow, ipcMain } from 'electron';
 import { getWorkspaceFolders } from './workspace';
 import { loadHistory } from './history';
+import { getSessionCwd, getSessionMap } from './shell';
 
 interface PendingCommand {
   id: string;
@@ -24,6 +25,8 @@ let token = '';
 let activeSessionId = '';
 let pendingActiveSessionId = '';
 let pendingCreateTab = '';
+let pendingCreateTabCwd = '';
+let pendingActivateWorkspaceIndex = -1;
 const sessions = new Map<string, SessionState>();
 
 export function getActiveSessionId(): string {
@@ -48,6 +51,19 @@ export function getPendingCreateTab(): string {
 
 export function clearPendingCreateTab(): void {
   pendingCreateTab = '';
+  pendingCreateTabCwd = '';
+}
+
+export function getPendingCreateTabCwd(): string {
+  return pendingCreateTabCwd;
+}
+
+export function getPendingActivateWorkspaceIndex(): number {
+  return pendingActivateWorkspaceIndex;
+}
+
+export function clearPendingActivateWorkspaceIndex(): void {
+  pendingActivateWorkspaceIndex = -1;
 }
 
 export function getRemoteServerPort(): number {
@@ -60,12 +76,25 @@ export function getRemoteToken(): string {
 
 export function getAllSessions(): Array<{ id: string; tabTitle: string; cwd: string }> {
   const list: Array<{ id: string; tabTitle: string; cwd: string }> = [];
+  const seen = new Set<string>();
+  // Include sessions that have pushed snapshots
   for (const [id, s] of sessions) {
+    seen.add(id);
     list.push({
       id,
       tabTitle: s.snapshot?.tabTitle || id,
-      cwd: s.snapshot?.cwd || '',
+      cwd: s.snapshot?.cwd || getSessionCwd(id),
     });
+  }
+  // Include shell sessions that haven't pushed snapshots yet
+  for (const [id] of getSessionMap()) {
+    if (!seen.has(id)) {
+      list.push({
+        id,
+        tabTitle: id,
+        cwd: getSessionCwd(id),
+      });
+    }
   }
   return list;
 }
@@ -135,7 +164,13 @@ export function startRemoteServer(port: number, authToken: string): Promise<numb
     }
 
     // Phone client static files
-    app.use('/phone', express.static(getPhoneClientPath()));
+    app.use('/phone', express.static(getPhoneClientPath(), {
+      setHeaders: (res) => {
+        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
+      },
+    }));
 
     // API: auth
     app.post('/api/auth', (req, res) => {
@@ -192,6 +227,20 @@ export function startRemoteServer(port: number, authToken: string): Promise<numb
       res.json(getWorkspaceFolders());
     });
 
+    // API: activate workspace folder by index (phone → desktop)
+    app.post('/api/workspace/activate', (req, res) => {
+      const { index } = req.body;
+      if (typeof index === 'number' && index >= 0) {
+        const folders = getWorkspaceFolders();
+        if (index < folders.length) {
+          pendingActivateWorkspaceIndex = index;
+          return res.json({ ok: true, folder: folders[index] });
+        }
+        return res.status(400).json({ error: 'index out of range' });
+      }
+      res.status(400).json({ error: 'invalid index' });
+    });
+
     // API: history records
     app.get('/api/history', (req, res) => {
       const store = loadHistory();
@@ -207,9 +256,9 @@ export function startRemoteServer(port: number, authToken: string): Promise<numb
 
     // API: create new tab (phone → desktop)
     app.post('/api/tabs', (req, res) => {
-      const { shell: shellType } = req.body;
-      console.log('[CCTerm] POST /api/tabs shell:', shellType);
+      const { shell: shellType, cwd } = req.body;
       pendingCreateTab = shellType || 'powershell';
+      pendingCreateTabCwd = cwd || '';
       res.json({ ok: true });
     });
 
@@ -221,11 +270,9 @@ export function startRemoteServer(port: number, authToken: string): Promise<numb
     // API: set active session (phone → desktop)
     app.post('/api/sessions/active', (req, res) => {
       const { sessionId } = req.body;
-      console.log('[CCTerm] POST /api/sessions/active body:', req.body);
       if (sessionId) {
         activeSessionId = sessionId;
         pendingActiveSessionId = sessionId;
-        console.log('[CCTerm] Active session set to:', sessionId, '(pending push to desktop)');
         res.json({ ok: true });
       } else {
         res.status(400).json({ error: 'missing sessionId' });
@@ -261,9 +308,10 @@ export function setupRemoteHandlers(): void {
   ipcMain.handle('remote:getLanIp', () => getLanIp());
   ipcMain.handle('remote:isRunning', () => server !== null);
   ipcMain.handle('remote:setActiveSession', (_event, sessionId: string) => {
-    if (sessions.has(sessionId)) {
-      activeSessionId = sessionId;
-    }
+    activeSessionId = sessionId;
+  });
+  ipcMain.handle('remote:getActiveSession', () => {
+    return activeSessionId;
   });
   ipcMain.handle('remote:toggle', async () => {
     if (server) {

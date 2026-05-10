@@ -199,7 +199,7 @@ export interface RemoteAPI {
   isRunning(): Promise<boolean>;
   toggle(): Promise<boolean>;
   setActiveSession(sessionId: string): Promise<void>;
-  onActivateTab(callback: (sessionId: string) => void): () => void;
+  getActiveSession(): Promise<string>;
 }
 
 const remoteAPI: RemoteAPI = {
@@ -209,14 +209,7 @@ const remoteAPI: RemoteAPI = {
   isRunning: () => ipcRenderer.invoke('remote:isRunning'),
   toggle: () => ipcRenderer.invoke('remote:toggle'),
   setActiveSession: (sessionId) => ipcRenderer.invoke('remote:setActiveSession', sessionId),
-  onActivateTab: (callback) => {
-    const handler = (_event: any, sessionId: string) => {
-      console.log('[preload] remote:activateTab received:', sessionId);
-      callback(sessionId);
-    };
-    ipcRenderer.on('remote:activateTab', handler);
-    return () => ipcRenderer.removeListener('remote:activateTab', handler);
-  },
+  getActiveSession: () => ipcRenderer.invoke('remote:getActiveSession'),
 };
 
 contextBridge.exposeInMainWorld('remoteAPI', remoteAPI);
@@ -225,10 +218,27 @@ contextBridge.exposeInMainWorld('appAPI', {
   onReady: (callback: (windowId?: string) => void) => {
     ipcRenderer.on('terminal-ready', (_event, windowId) => callback(windowId));
   },
-  onRemoteCreateTab: (callback: (shellType: string) => void) => {
-    const handler = (_event: any, shellType: string) => callback(shellType);
+  onRemoteCreateTab: (callback: (shellType: string, cwd?: string) => void) => {
+    const handler = (_event: any, data: { shell: string; cwd?: string } | string) => {
+      // Support both old string-only and new object format
+      if (typeof data === 'string') {
+        callback(data);
+      } else {
+        callback(data.shell, data.cwd);
+      }
+    };
     ipcRenderer.on('remote:createTab', handler);
     return () => ipcRenderer.removeListener('remote:createTab', handler);
+  },
+  onRemoteActivateTab: (callback: (sessionId: string) => void) => {
+    const handler = (_event: any, sessionId: string) => callback(sessionId);
+    ipcRenderer.on('remote:activateTab', handler);
+    return () => ipcRenderer.removeListener('remote:activateTab', handler);
+  },
+  onRemoteActivateWorkspace: (callback: (folder: string) => void) => {
+    const handler = (_event: any, folder: string) => callback(folder);
+    ipcRenderer.on('remote:activateWorkspace', handler);
+    return () => ipcRenderer.removeListener('remote:activateWorkspace', handler);
   },
   openExternal: (url: string) => {
     ipcRenderer.invoke('shell:openExternal', url);

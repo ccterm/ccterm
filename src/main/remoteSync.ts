@@ -1,6 +1,7 @@
 import { BrowserWindow, ipcMain } from 'electron';
-import { saveSnapshot, getCommands, clearCommands, getPendingActiveSessionId, clearPendingActiveSessionId, getPendingCreateTab, clearPendingCreateTab } from './remoteServer';
+import { saveSnapshot, getCommands, clearCommands, getPendingActiveSessionId, clearPendingActiveSessionId, getPendingCreateTab, clearPendingCreateTab, getPendingCreateTabCwd, getPendingActivateWorkspaceIndex, clearPendingActivateWorkspaceIndex } from './remoteServer';
 import { getSessionMap } from './shell';
+import { getWorkspaceFolders } from './workspace';
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let syncInterval = 2000;
@@ -28,7 +29,6 @@ async function processCommands(): Promise<void> {
   const pendingId = getPendingActiveSessionId();
   if (pendingId) {
     clearPendingActiveSessionId();
-    console.log('[CCTerm] Pushing active session to desktop:', pendingId);
     BrowserWindow.getAllWindows().forEach((win) => {
       if (!win.isDestroyed() && win.webContents && !win.webContents.isDestroyed()) {
         win.webContents.send('remote:activateTab', pendingId);
@@ -39,13 +39,28 @@ async function processCommands(): Promise<void> {
   // Push pending tab creation from phone to desktop
   const pendingShell = getPendingCreateTab();
   if (pendingShell) {
+    const pendingCwd = getPendingCreateTabCwd();
     clearPendingCreateTab();
-    console.log('[CCTerm] Pushing create tab to desktop, shell:', pendingShell);
     BrowserWindow.getAllWindows().forEach((win) => {
       if (!win.isDestroyed() && win.webContents && !win.webContents.isDestroyed()) {
-        win.webContents.send('remote:createTab', pendingShell);
+        win.webContents.send('remote:createTab', { shell: pendingShell, cwd: pendingCwd || undefined });
       }
     });
+  }
+
+  // Push pending workspace folder activation from phone to desktop
+  const wsIndex = getPendingActivateWorkspaceIndex();
+  if (wsIndex >= 0) {
+    clearPendingActivateWorkspaceIndex();
+    const folders = getWorkspaceFolders();
+    const folder = folders[wsIndex];
+    if (folder) {
+      BrowserWindow.getAllWindows().forEach((win) => {
+        if (!win.isDestroyed() && win.webContents && !win.webContents.isDestroyed()) {
+          win.webContents.send('remote:activateWorkspace', folder);
+        }
+      });
+    }
   }
 }
 

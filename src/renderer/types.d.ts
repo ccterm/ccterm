@@ -9,12 +9,14 @@ declare global {
     clipboardAPI: ClipboardAPI;
     windowAPI: WindowAPI;
     promptAPI: PromptAPI;
-    remoteAPI: RemoteAPI & { setActiveSession(sessionId: string): Promise<void>; onActivateTab(callback: (sessionId: string) => void): () => void; };
+    remoteAPI: RemoteAPI & { setActiveSession(sessionId: string): Promise<void>; getActiveSession(): Promise<string>; };
     workspaceAPI: WorkspaceAPI;
     sessionPersistenceAPI: SessionPersistenceAPI;
     appAPI: {
       onReady: (callback: (windowId?: string) => void) => void;
-      onRemoteCreateTab: (callback: (shellType: string) => void) => () => void;
+      onRemoteCreateTab: (callback: (shellType: string, cwd?: string) => void) => () => void;
+      onRemoteActivateTab: (callback: (sessionId: string) => void) => () => void;
+      onRemoteActivateWorkspace: (callback: (folder: string) => void) => () => void;
       openExternal: (url: string) => void;
       setTitle: (title: string) => void;
     };

@@ -214,6 +214,9 @@ const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }
 
   // Track CWD changes and update the tab store (for workspace folder matching)
   useEffect(() => {
+    window.shellAPI.getCwd(sessionId).then((cwd) => {
+      if (cwd) updateTabCwd(tabId, cwd);
+    });
     const unsub = window.shellAPI.onCwdChanged(sessionId, (cwd) => {
       updateTabCwd(tabId, cwd);
     });
