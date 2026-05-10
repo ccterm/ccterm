@@ -14,6 +14,7 @@ declare global {
     sessionPersistenceAPI: SessionPersistenceAPI;
     appAPI: {
       onReady: (callback: (windowId?: string) => void) => void;
+      onRemoteCreateTab: (callback: (shellType: string) => void) => () => void;
       openExternal: (url: string) => void;
       setTitle: (title: string) => void;
     };

@@ -214,6 +214,11 @@ contextBridge.exposeInMainWorld('appAPI', {
   onReady: (callback: (windowId?: string) => void) => {
     ipcRenderer.on('terminal-ready', (_event, windowId) => callback(windowId));
   },
+  onRemoteCreateTab: (callback: (shellType: string) => void) => {
+    const handler = (_event: any, shellType: string) => callback(shellType);
+    ipcRenderer.on('remote:createTab', handler);
+    return () => ipcRenderer.removeListener('remote:createTab', handler);
+  },
   openExternal: (url: string) => {
     ipcRenderer.invoke('shell:openExternal', url);
   },

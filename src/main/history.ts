@@ -25,7 +25,7 @@ function getHistoryPath(): string {
 
 let historyCache: HistoryStore | null = null;
 
-function loadHistory(): HistoryStore {
+export function loadHistory(): HistoryStore {
   if (historyCache) return historyCache;
   try {
     const filePath = getHistoryPath();

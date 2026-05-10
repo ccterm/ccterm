@@ -51,6 +51,18 @@ const App: React.FC = () => {
     return unsub;
   }, []);
 
+  // Listen for remote tab creation from phone
+  useEffect(() => {
+    const unsub = window.appAPI.onRemoteCreateTab((shellType: string) => {
+      const title = shellType === 'cmd' ? 'CMD' : 'PowerShell';
+      const cwd = activeFolder || undefined;
+      const tab = addTab({ title, shell: shellType, cwd });
+      initRoot(tab.id);
+      useTabStore.getState().setActiveTab(tab.id);
+    });
+    return unsub;
+  }, [addTab, initRoot, activeFolder]);
+
   const createDefaultTab = useCallback(() => {
     const title = defaultShellType === 'cmd' ? 'CMD' : 'PowerShell';
     const cwd = activeFolder || undefined;
