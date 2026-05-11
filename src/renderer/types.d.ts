@@ -1,4 +1,4 @@
-import type { ShellAPI, ConfigAPI, SessionAPI, HistoryAPI, ClipboardAPI, WindowAPI, PromptAPI, RemoteAPI, WorkspaceAPI, SessionPersistenceAPI } from '../preload/index';
+import type { ShellAPI, ConfigAPI, SessionAPI, HistoryAPI, ClipboardAPI, WindowAPI, PromptAPI, RemoteAPI, RelayAPI, WorkspaceAPI, SessionPersistenceAPI } from '../preload/index';
 
 declare global {
   interface Window {
@@ -10,6 +10,7 @@ declare global {
     windowAPI: WindowAPI;
     promptAPI: PromptAPI;
     remoteAPI: RemoteAPI & { setActiveSession(sessionId: string): Promise<void>; getActiveSession(): Promise<string>; };
+    relayAPI: RelayAPI;
     workspaceAPI: WorkspaceAPI;
     sessionPersistenceAPI: SessionPersistenceAPI;
     appAPI: {

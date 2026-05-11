@@ -16,6 +16,8 @@ interface MenuBarProps {
   onToggleRemote: () => void;
   remoteRunning: boolean;
   onOpenQrCode: () => void;
+  relayConnected: boolean;
+  onToggleRelay: () => void;
 }
 
 interface MenuState {
@@ -38,6 +40,8 @@ const MenuBar: React.FC<MenuBarProps> = ({
   onToggleRemote,
   remoteRunning,
   onOpenQrCode,
+  relayConnected,
+  onToggleRelay,
 }) => {
   const [menu, setMenu] = useState<MenuState>({ open: null, subOpen: null });
   const barRef = useRef<HTMLDivElement>(null);
@@ -266,7 +270,7 @@ const MenuBar: React.FC<MenuBarProps> = ({
           {defaultShellType === 'powershell' ? 'PS' : 'CMD'}
         </button>
         <div className="menubar-toolbar-sep" />
-        <button className="menubar-toolbar-btn" onClick={onOpenQrCode} title="远程操控二维码">
+        <button className="menubar-toolbar-btn" onClick={onOpenQrCode} title="局域网远程操控">
           <svg width="14" height="14" viewBox="0 0 14 14">
             <rect x="2" y="2" width="10" height="10" rx="1" fill="none" stroke="currentColor" strokeWidth="1.1" />
             <rect x="4" y="4" width="2.5" height="2.5" fill="currentColor" />
@@ -274,6 +278,13 @@ const MenuBar: React.FC<MenuBarProps> = ({
             <rect x="4" y="7.5" width="2.5" height="2.5" fill="currentColor" />
             <rect x="7.5" y="7.5" width="2.5" height="2.5" fill="currentColor" />
           </svg>
+        </button>
+        <button
+          className={`menubar-toolbar-btn shell-btn${relayConnected ? ' ps' : ' pt'}`}
+          onClick={onToggleRelay}
+          title="远程中转控制 (Relay)"
+        >
+          R
         </button>
         <button className="menubar-toolbar-btn" onClick={onToggleSearch} title="Search (Ctrl+Shift+F)">
           <svg width="14" height="14" viewBox="0 0 14 14">

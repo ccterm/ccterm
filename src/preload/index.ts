@@ -214,6 +214,32 @@ const remoteAPI: RemoteAPI = {
 
 contextBridge.exposeInMainWorld('remoteAPI', remoteAPI);
 
+export interface RelayAPI {
+  toggle(): Promise<{ connected: boolean; roomId: string; phoneUrl: string; error?: string }>;
+  isConnected(): Promise<boolean>;
+  getPhoneUrl(): Promise<string>;
+  getRoomId(): Promise<string>;
+  pushSnapshot(sessionId: string, snapshot: any): Promise<void>;
+  pushSessions(): Promise<void>;
+  onStatus(callback: (status: { connected: boolean; roomId: string }) => void): () => void;
+}
+
+const relayAPI: RelayAPI = {
+  toggle: () => ipcRenderer.invoke('relay:toggle'),
+  isConnected: () => ipcRenderer.invoke('relay:isConnected'),
+  getPhoneUrl: () => ipcRenderer.invoke('relay:getPhoneUrl'),
+  getRoomId: () => ipcRenderer.invoke('relay:getRoomId'),
+  pushSnapshot: (sessionId, snapshot) => ipcRenderer.invoke('relay:pushSnapshot', sessionId, snapshot),
+  pushSessions: () => ipcRenderer.invoke('relay:pushSessions'),
+  onStatus: (callback) => {
+    const handler = (_event: any, status: { connected: boolean; roomId: string }) => callback(status);
+    ipcRenderer.on('relay:status', handler);
+    return () => ipcRenderer.removeListener('relay:status', handler);
+  },
+};
+
+contextBridge.exposeInMainWorld('relayAPI', relayAPI);
+
 contextBridge.exposeInMainWorld('appAPI', {
   onReady: (callback: (windowId?: string) => void) => {
     ipcRenderer.on('terminal-ready', (_event, windowId) => callback(windowId));

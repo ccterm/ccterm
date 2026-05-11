@@ -28,14 +28,23 @@ const App: React.FC = () => {
   const [showPromptTool, setShowPromptTool] = useState(false);
   const [defaultShellType, setDefaultShellType] = useState<string>('powershell');
   const [remoteRunning, setRemoteRunning] = useState(false);
+  const [relayConnected, setRelayConnected] = useState(false);
+  const [relayServerUrl, setRelayServerUrl] = useState('');
+  const [relayError, setRelayError] = useState('');
   const [showQrCode, setShowQrCode] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [qrCodeMode, setQrCodeMode] = useState<'lan' | 'relay'>('lan');
   const initialTabCreated = useRef(false);
   const sessionLoaded = useRef(false);
 
   // Load config on startup
   useEffect(() => {
-    loadConfig();
+    loadConfig().then(() => {
+      const cfg = useConfigStore.getState().config;
+      if (cfg?.remoteControl?.relayServerUrl) {
+        setRelayServerUrl(cfg.remoteControl.relayServerUrl);
+      }
+    });
   }, [loadConfig]);
 
   // Load workspace folders on mount
@@ -48,7 +57,9 @@ const App: React.FC = () => {
     window.shellAPI.getDefaultType().then(setDefaultShellType);
     const unsub = window.shellAPI.onDefaultTypeChanged(setDefaultShellType);
     window.remoteAPI.isRunning().then(setRemoteRunning);
-    return unsub;
+    window.relayAPI.isConnected().then(setRelayConnected);
+    const unsubRelay = window.relayAPI.onStatus((status) => setRelayConnected(status.connected));
+    return () => { unsub(); unsubRelay(); };
   }, []);
 
   // Listen for remote tab creation from phone
@@ -207,15 +218,69 @@ const App: React.FC = () => {
   const handleOpenQrCode = useCallback(async () => {
     const running = await window.remoteAPI.isRunning();
     if (!running) {
-      // Try to start remote server
       const started = await window.remoteAPI.toggle();
-      if (!started) {
-        // Could show an error, but for now just continue
-      }
+      if (!started) return;
     }
     const url = await window.remoteAPI.getRemoteUrl();
     setQrCodeUrl(url);
+    setQrCodeMode('lan');
     setShowQrCode(true);
+  }, []);
+
+  const handleToggleRelay = useCallback(async () => {
+    // Refresh relayServerUrl from config
+    const cfg = useConfigStore.getState().config;
+    const savedUrl = cfg?.remoteControl?.relayServerUrl || '';
+
+    if (relayConnected) {
+      // Disconnect
+      await window.relayAPI.toggle();
+      setShowQrCode(false);
+      return;
+    }
+
+    if (!savedUrl) {
+      // No relay server configured — show setup panel
+      setQrCodeUrl('');
+      setRelayError('');
+      setQrCodeMode('relay');
+      setShowQrCode(true);
+      return;
+    }
+
+    // Try to connect
+    const result = await window.relayAPI.toggle();
+    if (result.connected) {
+      setRelayServerUrl(savedUrl);
+      setQrCodeUrl(result.phoneUrl);
+      setQrCodeMode('relay');
+      setShowQrCode(true);
+    } else if (result.error) {
+      setRelayError(result.error);
+      setQrCodeUrl('');
+      setQrCodeMode('relay');
+      setShowQrCode(true);
+    }
+  }, [relayConnected]);
+
+  const handleRelayConnect = useCallback(async (serverUrl: string) => {
+    setRelayError('');
+    // Save to config
+    const cfg = useConfigStore.getState().config;
+    if (cfg) {
+      const rc = { ...cfg.remoteControl, relayServerUrl: serverUrl };
+      useConfigStore.getState().updateRemote(rc);
+      await useConfigStore.getState().save();
+    }
+    setRelayServerUrl(serverUrl);
+
+    // Try connecting via IPC
+    const result = await window.relayAPI.toggle();
+    if (result.connected) {
+      setQrCodeUrl(result.phoneUrl);
+    } else if (result.error) {
+      setRelayError(result.error);
+    }
   }, []);
 
   // Register commands
@@ -352,6 +417,8 @@ const App: React.FC = () => {
       }}
       remoteRunning={remoteRunning}
       onOpenQrCode={handleOpenQrCode}
+      relayConnected={relayConnected}
+      onToggleRelay={handleToggleRelay}
     />
   );
 
@@ -360,7 +427,16 @@ const App: React.FC = () => {
       <div className="app-root">
         {menuBar}
         <SettingsPage onClose={closeSettings} />
-        {showQrCode && <QrCodePanel url={qrCodeUrl} onClose={() => setShowQrCode(false)} />}
+        {showQrCode && (
+          <QrCodePanel
+            url={qrCodeUrl}
+            onClose={() => { setShowQrCode(false); setRelayError(''); }}
+            relayMode={qrCodeMode === 'relay'}
+            relayServerUrl={relayServerUrl}
+            onRelayConnect={qrCodeMode === 'relay' ? handleRelayConnect : undefined}
+            relayError={relayError}
+          />
+        )}
       </div>
     );
   }
@@ -408,7 +484,16 @@ const App: React.FC = () => {
         <CommandPalette />
         {showPromptTool && <PromptTool onClose={() => setShowPromptTool(false)} />}
       </div>
-      {showQrCode && <QrCodePanel url={qrCodeUrl} onClose={() => setShowQrCode(false)} />}
+      {showQrCode && (
+        <QrCodePanel
+          url={qrCodeUrl}
+          onClose={() => { setShowQrCode(false); setRelayError(''); }}
+          relayMode={qrCodeMode === 'relay'}
+          relayServerUrl={relayServerUrl}
+          onRelayConnect={qrCodeMode === 'relay' ? handleRelayConnect : undefined}
+          relayError={relayError}
+        />
+      )}
     </div>
   );
 };

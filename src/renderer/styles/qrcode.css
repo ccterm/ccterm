@@ -109,3 +109,53 @@
   border-color: #0078d4;
   color: #fff;
 }
+
+.qrcode-setup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.qrcode-input {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  background: #1e1e1e;
+  border: 1px solid #454545;
+  border-radius: 4px;
+  color: #ccc;
+  outline: none;
+}
+
+.qrcode-input:focus {
+  border-color: #0078d4;
+}
+
+.qrcode-error {
+  color: #e74856;
+  font-size: 12px;
+}
+
+.qrcode-connect-btn {
+  width: 100%;
+  padding: 8px;
+  font-size: 13px;
+  background: #0078d4;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+}
+
+.qrcode-connect-btn:hover {
+  background: #1a8ad4;
+}
+
+.qrcode-connect-btn:disabled {
+  background: #333;
+  color: #666;
+  cursor: not-allowed;
+}

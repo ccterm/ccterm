@@ -5,9 +5,10 @@ import ProfileSettings from './settings/ProfileSettings';
 import SchemeSettings from './settings/SchemeSettings';
 import KeybindSettings from './settings/KeybindSettings';
 import AboutSettings from './settings/AboutSettings';
+import RemoteSettings from './settings/RemoteSettings';
 import '../styles/settings.css';
 
-type SettingsTab = 'global' | { type: 'profile'; index: number } | 'schemes' | 'keybindings' | 'about';
+type SettingsTab = 'global' | { type: 'profile'; index: number } | 'schemes' | 'keybindings' | 'remote' | 'about';
 
 interface Props {
   onClose: () => void;
@@ -36,6 +37,7 @@ const SettingsPage: React.FC<Props> = ({ onClose }) => {
     if (activeTab === 'global') return <GlobalSettings />;
     if (activeTab === 'schemes') return <SchemeSettings />;
     if (activeTab === 'keybindings') return <KeybindSettings />;
+    if (activeTab === 'remote') return <RemoteSettings />;
     if (activeTab === 'about') return <AboutSettings />;
     return <ProfileSettings profileIndex={activeTab.index} />;
   };
@@ -85,7 +87,7 @@ const SettingsPage: React.FC<Props> = ({ onClose }) => {
                 <div
                   key={p.name}
                   className={`settings-nav-item ${
-                    activeTab !== 'global' && activeTab !== 'schemes' && activeTab !== 'keybindings' && activeTab !== 'about' && activeTab.index === i
+                    activeTab !== 'global' && activeTab !== 'schemes' && activeTab !== 'keybindings' && activeTab !== 'remote' && activeTab !== 'about' && activeTab.index === i
                       ? 'active'
                       : ''
                   }`}
@@ -98,6 +100,12 @@ const SettingsPage: React.FC<Props> = ({ onClose }) => {
 
             <div className="settings-sidebar-group">
               <div className="settings-sidebar-label">Other</div>
+              <div
+                className={`settings-nav-item ${activeTab === 'remote' ? 'active' : ''}`}
+                onClick={() => setActiveTab('remote')}
+              >
+                Remote Control
+              </div>
               <div
                 className={`settings-nav-item ${activeTab === 'about' ? 'active' : ''}`}
                 onClick={() => setActiveTab('about')}

@@ -252,6 +252,10 @@ const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }
       timestamp: Date.now(),
     };
     window.remoteAPI.pushSnapshot(sessionId, snapshot);
+    // Also push via relay if connected
+    window.relayAPI.isConnected().then(connected => {
+      if (connected) window.relayAPI.pushSnapshot(sessionId, snapshot);
+    }).catch(() => {});
   }, [sessionId, tabId, getTabCwd]);
 
   useEffect(() => {

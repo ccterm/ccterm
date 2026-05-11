@@ -1,0 +1,13 @@
+{
+  "name": "ccterm-relay",
+  "version": "1.0.0",
+  "description": "CCTerm WebSocket relay server for remote control",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "start:pm2": "pm2 start index.js --name ccterm-relay"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

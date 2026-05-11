@@ -86,6 +86,9 @@ export interface RemoteControlConfig {
   port: number;
   token: string;
   syncInterval: number;
+  relayEnabled: boolean;
+  relayServerUrl: string;
+  relayToken: string;
 }
 
 export interface AppConfig {
@@ -323,6 +326,9 @@ export function createDefaultConfig(): AppConfig {
       port: 3001,
       token: '',
       syncInterval: 2000,
+      relayEnabled: false,
+      relayServerUrl: '',
+      relayToken: '',
     },
   };
 }

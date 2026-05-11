@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AppConfig, ProfileConfig, ColorScheme, Keybinding } from '../../shared/configTypes';
+import type { AppConfig, ProfileConfig, ColorScheme, Keybinding, RemoteControlConfig } from '../../shared/configTypes';
 
 interface ConfigState {
   config: AppConfig | null;
@@ -9,6 +9,7 @@ interface ConfigState {
   load: () => Promise<void>;
   save: () => Promise<void>;
   updateGlobal: (patch: Partial<AppConfig['global']>) => void;
+  updateRemote: (patch: RemoteControlConfig) => void;
   updateProfile: (index: number, patch: Partial<ProfileConfig>) => void;
   addProfile: (profile: ProfileConfig) => void;
   removeProfile: (index: number) => void;
@@ -42,6 +43,18 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         config: {
           ...state.config,
           global: { ...state.config.global, ...patch },
+        },
+      };
+    });
+  },
+
+  updateRemote: (patch) => {
+    set((state) => {
+      if (!state.config) return state;
+      return {
+        config: {
+          ...state.config,
+          remoteControl: patch,
         },
       };
     });

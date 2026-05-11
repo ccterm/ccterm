@@ -42,6 +42,7 @@ function loadConfigFromDisk(): AppConfig {
       ...defaults,
       ...parsed,
       global: { ...defaults.global, ...parsed.global },
+      remoteControl: { ...defaults.remoteControl, ...(parsed.remoteControl || {}) },
     };
   } catch {
     // If config is corrupted, return defaults

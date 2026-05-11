@@ -10,6 +10,7 @@ import { setupWorkspaceHandlers, setWorkspaceVisible } from './workspace';
 import { setupSessionPersistenceHandlers, loadSessionState } from './sessionPersistence';
 import { startRemoteServer, stopRemoteServer, setupRemoteHandlers, setActiveRemoteConfig } from './remoteServer';
 import { startRemoteSync, stopRemoteSync } from './remoteSync';
+import { setupRelayHandlers, connectRelay, disconnectRelay } from './relayClient';
 import { getConfig } from './config';
 
 ipcMain.handle('shell:openExternal', (_event, url: string) => {
@@ -97,6 +98,7 @@ app.whenReady().then(() => {
   const config = getConfig();
   setActiveRemoteConfig(config);
   setupRemoteHandlers();
+  setupRelayHandlers();
   if (config.remoteControl.enabled) {
     startRemoteServer(config.remoteControl.port, config.remoteControl.token)
       .then(() => {
@@ -105,6 +107,11 @@ app.whenReady().then(() => {
       .catch((err) => {
         console.error('[CCTerm] Failed to start remote server:', err.message);
       });
+  }
+  if (config.remoteControl.relayEnabled && config.remoteControl.relayServerUrl) {
+    connectRelay(config.remoteControl.relayServerUrl, config.remoteControl.relayToken || '')
+      .then(() => { console.log('[CCTerm] Relay connected on startup'); })
+      .catch((err) => { console.error('[CCTerm] Relay startup failed:', err.message); });
   }
 
   setupWindowManager();
@@ -127,6 +134,7 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
   stopRemoteSync();
   stopRemoteServer();
+  disconnectRelay();
   killAllSessions();
   destroyQuakeMode();
 });
