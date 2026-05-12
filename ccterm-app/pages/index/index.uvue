@@ -1,0 +1,18 @@
+<template>
+			<view :style="{ height: statusBarHeight + 'px', backgroundColor: '#ffffff' }" />
+	<web-view
+		:src="REMOTE_URL"
+		style="flex: 1;"
+	></web-view>
+</template>
+
+<script lang="uts">
+	export default {
+		data() {
+			return {
+				statusBarHeight : 24 as number,
+				REMOTE_URL: 'hybrid/html/index.html' as string
+			}
+		}
+	}
+</script>

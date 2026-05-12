@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CCTerm</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0c0c0c;color:#ccc;padding:20px;font-family:monospace}h1{color:#fff}p{color:#888;margin:10px 0}button{padding:10px 20px;background:#0078d4;color:#fff;border:none;border-radius:5px;margin:5px}input{padding:8px;background:#1a1a1a;border:1px solid #333;color:#fff;border-radius:4px;margin:5px 0;width:200px}.card{background:#1a1a1a;padding:15px;border-radius:8px;margin:10px 0;max-width:400px}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin:2px}.r{background:#e74856}.y{background:#f9a825}.g{background:#16c60c}</style></head>
+<body>
+<div class="card">
+  <h1><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span> CCTerm</h1>
+  <p>WebView 已加载</p>
+  <p id="status" style="color:#16c60c">JS 运行正常</p>
+  <div>
+    <label style="color:#888;font-size:12px">Host</label><br>
+    <input id="host" placeholder="192.168.1.100" value="127.0.0.1"><br>
+    <label style="color:#888;font-size:12px">Port</label><br>
+    <input id="port" type="number" placeholder="3001" value="3001" style="width:100px"><br>
+    <label style="color:#888;font-size:12px">Room (Relay)</label><br>
+    <input id="room" placeholder="room-id"><br>
+    <label style="color:#888;font-size:12px">Token</label><br>
+    <input id="token" placeholder="optional">
+  </div>
+  <p>
+    <button onclick="doConnect()">Connect (Relay WS)</button>
+    <button onclick="doConnectHttp()">Connect (HTTP)</button>
+  </p>
+  <p>
+    <button onclick="testScan()">Scan QR</button>
+  </p>
+  <pre id="output" style="background:#111;padding:10px;border-radius:5px;max-height:300px;overflow-y:auto;font-size:12px;margin-top:10px"></pre>
+</div>
+<script>
+var el = document.getElementById('output');
+function log(msg) { el.textContent += msg + '\n'; el.scrollTop = el.scrollHeight; }
+
+var ws = null;
+function doConnect() {
+  var host = document.getElementById('host').value.trim();
+  var port = document.getElementById('port').value.trim();
+  var room = document.getElementById('room').value.trim();
+  var token = document.getElementById('token').value.trim();
+  if (!host || !port) { log('ERROR: host/port required'); return; }
+  var url = 'ws://'+host+':'+port+'/?room='+encodeURIComponent(room)+'&role=phone';
+  log('Connecting: ' + url);
+  ws = new WebSocket(url);
+  ws.onopen = function() { log('WebSocket connected!'); };
+  ws.onmessage = function(e) { log('<- ' + e.data.substring(0,200)); };
+  ws.onclose = function() { log('WebSocket closed'); };
+  ws.onerror = function(e) { log('WebSocket error'); };
+}
+
+function doConnectHttp() {
+  var host = document.getElementById('host').value.trim();
+  var port = document.getElementById('port').value.trim();
+  var token = document.getElementById('token').value.trim();
+  if (!host || !port) { log('ERROR: host/port required'); return; }
+  var base = 'http://'+host+':'+port;
+  log('HTTP GET: ' + base + '/api/sessions');
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', base + '/api/sessions');
+  if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+  xhr.onload = function() { log('HTTP ' + xhr.status + ': ' + xhr.responseText.substring(0,500)); };
+  xhr.onerror = function() { log('HTTP error'); };
+  xhr.send();
+}
+
+function testScan() {
+  if (typeof uni !== 'undefined' && uni.scanCode) {
+    uni.scanCode({
+      onlyFromCamera: true, scanType: ['qrCode'],
+      success: function(r) { log('QR: ' + (r.result||r.scanResult||'')); },
+      fail: function(e) { log('Scan fail: ' + JSON.stringify(e)); }
+    });
+  } else {
+    log('uni.scanCode not available in WebView');
+  }
+}
+document.getElementById('status').textContent = 'JS running - ready';
+</script>
+</body></html>

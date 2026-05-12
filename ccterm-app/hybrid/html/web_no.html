@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>今日头条 - 频道管理</title>
+  <script type="text/javascript" src="uni.webview.1.5.5.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:-apple-system,'PingFang SC','Helvetica Neue',sans-serif;background:var(--color-background-primary);overscroll-behavior:none;}
+
+/* CSS变量适配亮色 */
+:root{
+  --color-background-primary:#ffffff;
+  --color-background-secondary:#f5f5f5;
+  --color-background-tertiary:#ebebeb;
+  --color-text-primary:#1a1a1a;
+  --color-text-secondary:#666666;
+  --color-text-tertiary:#999999;
+  --color-border-tertiary:rgba(0,0,0,0.10);
+  --color-border-secondary:rgba(0,0,0,0.18);
+  --border-radius-md:8px;
+  --border-radius-lg:12px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --color-background-primary:#1c1c1e;
+    --color-background-secondary:#2c2c2e;
+    --color-background-tertiary:#3a3a3c;
+    --color-text-primary:#f2f2f7;
+    --color-text-secondary:#aeaeb2;
+    --color-text-tertiary:#636366;
+    --color-border-tertiary:rgba(255,255,255,0.10);
+    --color-border-secondary:rgba(255,255,255,0.18);
+  }
+}
+
+.wrap{width:100%;height:100%;}
+.phone{width:100%;height:100%;background:var(--color-background-primary);display:flex;flex-direction:column;position:relative;padding-top:env(safe-area-inset-top);}
+.sbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:0.5px solid var(--color-border-tertiary);flex-shrink:0;background:var(--color-background-primary);}
+.sbar-t{font-size:15px;font-weight:500;color:var(--color-text-primary);}
+.sbar-r{display:flex;align-items:center;gap:5px;}
+.sbar-r svg{width:15px;height:15px;fill:var(--color-text-primary);}
+.hdr{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 16px;border-bottom:0.5px solid var(--color-border-tertiary);flex-shrink:0;background:var(--color-background-primary);}
+.logo{font-size:20px;font-weight:700;color:#E53935;letter-spacing:-0.5px;}
+.hdr-r{display:flex;align-items:center;gap:16px;}
+.hdr-ico{width:22px;height:22px;color:var(--color-text-secondary);}
+.ch-wrap{display:flex;align-items:stretch;border-bottom:0.5px solid var(--color-border-tertiary);flex-shrink:0;background:var(--color-background-primary);}
+.ch-scroll{flex:1;overflow-x:auto;scrollbar-width:none;}
+.ch-scroll::-webkit-scrollbar{display:none;}
+.ch-list{display:flex;white-space:nowrap;padding:0 4px;}
+.ch-item{display:inline-flex;flex-direction:column;align-items:center;padding:10px 14px 0;cursor:pointer;flex-shrink:0;color:var(--color-text-secondary);font-size:15px;gap:8px;}
+.ch-item.on{color:#E53935;font-weight:500;}
+.ch-ul{height:2px;width:18px;border-radius:1px;background:transparent;}
+.ch-item.on .ch-ul{background:#E53935;}
+.ch-add{width:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-left:0.5px solid var(--color-border-tertiary);flex-shrink:0;}
+.ch-add svg{width:18px;height:18px;color:var(--color-text-secondary);}
+.feed{flex:1;overflow-y:auto;padding:4px 0;overscroll-behavior:contain;}
+.fi{padding:14px 16px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;gap:12px;}
+.ftitle{font-size:15px;color:var(--color-text-primary);line-height:1.5;margin-bottom:8px;}
+.fmeta{font-size:12px;color:var(--color-text-tertiary);}
+.fthumb{width:88px;height:66px;background:var(--color-background-secondary);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:26px;}
+.f3{flex-direction:column;}
+.f3imgs{display:flex;gap:4px;margin-top:8px;}
+.f3imgs div{flex:1;height:72px;background:var(--color-background-secondary);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:22px;}
+
+.mgr{position:absolute;inset:0;background:var(--color-background-primary);border-radius:0;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.28s cubic-bezier(0.32,0,0.15,1);z-index:20;padding-top:env(safe-area-inset-top);}
+.mgr.show{transform:translateX(0);}
+.mgr-hdr{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:0.5px solid var(--color-border-tertiary);flex-shrink:0;}
+.mgr-back{display:flex;align-items:center;gap:2px;cursor:pointer;color:var(--color-text-secondary);font-size:14px;}
+.mgr-back svg{width:18px;height:18px;}
+.mgr-ttl{font-size:16px;font-weight:500;color:var(--color-text-primary);}
+.mgr-done{font-size:14px;color:#E53935;cursor:pointer;}
+.mgr-body{flex:1;overflow-y:auto;}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;}
+.sec-lbl{font-size:13px;color:var(--color-text-secondary);}
+.sec-tip{font-size:12px;color:var(--color-text-tertiary);}
+.edit-btn{font-size:13px;color:#E53935;cursor:pointer;}
+
+.chip-grid{display:flex;flex-wrap:wrap;gap:10px;padding:0 16px 4px;}
+.chip{padding:7px 14px;border-radius:4px;font-size:14px;cursor:pointer;border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary);}
+.chip.active-ch{border-color:#E53935;color:#E53935;}
+
+.ch-row{display:flex;align-items:center;padding:0 16px;height:50px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-background-primary);user-select:none;-webkit-user-select:none;}
+.ch-row.dragging{opacity:0.4;}
+.ch-row.drag-over{background:var(--color-background-secondary);}
+.ch-row.moved{animation:rowFlash 0.5s ease;}
+@keyframes rowFlash{
+  0%{background:rgba(229,57,53,0.18);}
+  60%{background:rgba(229,57,53,0.10);}
+  100%{background:transparent;}
+}
+.row-drag{width:32px;height:50px;display:flex;align-items:center;justify-content:center;cursor:grab;color:var(--color-text-tertiary);flex-shrink:0;}
+.row-drag svg{width:18px;height:18px;}
+.row-name{flex:1;font-size:15px;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.row-left{display:flex;align-items:center;flex:1;height:50px;overflow:hidden;cursor:grab;}
+.custom-tag{font-size:11px;color:#E53935;border:0.5px solid #E53935;border-radius:3px;padding:1px 4px;margin-left:6px;vertical-align:middle;}
+.row-actions{display:flex;align-items:center;}
+.row-btn{width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:var(--border-radius-md);}
+.row-btn:active{background:var(--color-background-secondary);}
+.row-btn svg{width:17px;height:17px;}
+.row-btn.up-ico{color:var(--color-text-secondary);}
+.row-btn.down-ico{color:var(--color-text-secondary);}
+.row-btn.up-ico:disabled,.row-btn.down-ico:disabled{opacity:0.25;pointer-events:none;}
+
+.divider{height:8px;background:var(--color-background-tertiary);}
+.rec-grid{display:flex;flex-wrap:wrap;gap:10px;padding:4px 16px 16px;}
+.rec-chip{padding:8px 14px;border-radius:4px;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:5px;border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary);}
+.bplus{font-size:14px;color:#4CAF50;}
+
+.modal-bg{position:absolute;inset:0;border-radius:20px;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:40;}
+.modal-bg.show{display:flex;}
+.modal{background:var(--color-background-primary);border-radius:var(--border-radius-lg);padding:20px 20px 16px;width:288px;}
+.modal-ttl{font-size:15px;font-weight:500;color:var(--color-text-primary);text-align:center;margin-bottom:6px;}
+.modal-sub{font-size:12px;color:var(--color-text-tertiary);text-align:center;margin-bottom:14px;}
+.modal-inp{width:100%;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:9px 12px;font-size:15px;color:var(--color-text-primary);background:var(--color-background-secondary);outline:none;}
+.modal-inp:focus{border-color:#E53935;box-shadow:0 0 0 2px rgba(229,57,53,0.12);}
+.modal-hint{font-size:12px;color:var(--color-text-tertiary);margin-top:5px;min-height:16px;}
+.modal-btns{display:flex;gap:10px;margin-top:16px;}
+.mbtn{flex:1;padding:9px 0;border-radius:var(--border-radius-md);font-size:14px;cursor:pointer;text-align:center;border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-secondary);}
+.mbtn.red{background:#E53935;color:#fff;border-color:#E53935;}
+.mbtn.danger{background:#fff;color:#E53935;border-color:#E53935;}
+</style>
+<body>
+<div class="wrap">
+<div class="phone" id="phone">
+  <div class="hdr">
+    <span class="logo">今日头条</span>
+    <div class="hdr-r">
+      <svg class="hdr-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <svg class="hdr-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    </div>
+  </div>
+  <div class="ch-wrap">
+    <div class="ch-scroll"><div class="ch-list" id="chList"></div></div>
+    <div class="ch-add" id="openMgr">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+  </div>
+  <div class="feed" id="feedArea"></div>
+
+  <div class="mgr" id="mgr">
+    <div class="mgr-hdr">
+      <div class="mgr-back" id="mgrBack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>返回</div>
+      <span class="mgr-ttl">频道管理</span>
+      <span class="mgr-done" id="mgrDone">完成</span>
+    </div>
+    <div class="mgr-body">
+      <div class="sec-hdr">
+        <div><span class="sec-lbl">我的频道</span><span class="sec-tip" id="myTip" style="margin-left:6px;"></span></div>
+        <span class="edit-btn" id="editBtn">编辑</span>
+      </div>
+      <div id="myArea"></div>
+      <div class="divider"></div>
+      <div class="sec-hdr">
+        <span class="sec-lbl">推荐频道</span>
+        <span class="sec-tip">点击添加</span>
+      </div>
+      <div class="rec-grid" id="recGrid"></div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="renameModal">
+    <div class="modal">
+      <div class="modal-ttl">重命名频道</div>
+      <div class="modal-sub" id="rnOrig"></div>
+      <input class="modal-inp" id="rnInput" maxlength="8" placeholder="输入新名称（最多8字）"/>
+      <div class="modal-hint" id="rnHint"></div>
+      <div class="modal-btns">
+        <div class="mbtn" id="rnCancel">取消</div>
+        <div class="mbtn red" id="rnConfirm">确定</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="delModal">
+    <div class="modal">
+      <div class="modal-ttl">删除频道</div>
+      <div class="modal-sub" id="delSub"></div>
+      <div class="modal-btns">
+        <div class="mbtn" id="delCancel">取消</div>
+        <div class="mbtn danger" id="delConfirm">删除</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+let myChannels=['推荐','热榜','视频','娱乐','体育','科技','财经'];
+let recChannels=['早上','中午','晚上'];
+let customNames={};
+let activeChannel='推荐';
+let isEditing=false;
+let renameTarget=null;
+let deleteTarget=null;
+let dragSrc=null;
+
+function bindTouchDrag(rows){
+  let touchSrcIdx=null, touchClone=null, touchOffsetY=0;
+  rows.querySelectorAll('.row-left').forEach(handle=>{
+    handle.addEventListener('touchstart',e=>{
+      const row=handle.closest('.ch-row');
+      touchSrcIdx=parseInt(row.dataset.idx);
+      const rect=row.getBoundingClientRect();
+      touchOffsetY=e.touches[0].clientY-rect.top;
+      // 克隆行作为拖拽占位
+      touchClone=row.cloneNode(true);
+      touchClone.style.cssText=`position:fixed;left:0;right:0;top:${rect.top}px;height:${rect.height}px;opacity:0.85;background:var(--color-background-secondary);z-index:999;pointer-events:none;display:flex;align-items:center;padding:0 16px;`;
+      document.body.appendChild(touchClone);
+      row.classList.add('dragging');
+      e.preventDefault();
+    },{passive:false});
+
+    handle.addEventListener('touchmove',e=>{
+      if(touchSrcIdx===null||!touchClone) return;
+      e.preventDefault();
+      const y=e.touches[0].clientY;
+      touchClone.style.top=(y-touchOffsetY)+'px';
+      // 找到当前 y 位置对应的行
+      rows.querySelectorAll('.ch-row').forEach(r=>r.classList.remove('drag-over'));
+      const target=document.elementFromPoint(e.touches[0].clientX, y);
+      const targetRow=target&&target.closest('.ch-row');
+      if(targetRow&&targetRow!==rows.querySelector('.ch-row.dragging')){
+        targetRow.classList.add('drag-over');
+      }
+    },{passive:false});
+
+    handle.addEventListener('touchend',e=>{
+      if(touchSrcIdx===null) return;
+      const y=e.changedTouches[0].clientY;
+      const target=document.elementFromPoint(e.changedTouches[0].clientX, y);
+      const targetRow=target&&target.closest('.ch-row');
+      if(targetRow){
+        const tgtIdx=parseInt(targetRow.dataset.idx);
+        if(tgtIdx!==touchSrcIdx){
+          const item=myChannels.splice(touchSrcIdx,1)[0];
+          myChannels.splice(tgtIdx,0,item);
+          renderBar(); renderManage();
+        }
+      }
+      if(touchClone) touchClone.remove();
+      touchClone=null; touchSrcIdx=null;
+      rows.querySelectorAll('.ch-row').forEach(r=>{r.classList.remove('dragging');r.classList.remove('drag-over');});
+    });
+  });
+}
+
+const FEEDS={
+  推荐:[
+    {title:'OpenAI发布新一代模型，性能全面超越前代产品',meta:'科技日报 · 2小时前 · 1.2万阅读',img:'📰'},
+    {title:'全国多地降温！这个周末气温骤降十度以上',meta:'天气网 · 4小时前 · 8900阅读',img:'🌦'},
+    {title:'NBA季后赛首轮：湖人险胜掘金，系列赛扳平',meta:'体育周刊 · 5小时前 · 3.4万阅读',three:true},
+    {title:'OpenAI发布新一代模型，性能全面超越前代产品',meta:'科技日报 · 2小时前 · 1.2万阅读',img:'📰'},
+    {title:'全国多地降温！这个周末气温骤降十度以上',meta:'天气网 · 4小时前 · 8900阅读',img:'🌦'},
+    {title:'NBA季后赛首轮：湖人险胜掘金，系列赛扳平',meta:'体育周刊 · 5小时前 · 3.4万阅读',three:true},
+    {title:'OpenAI发布新一代模型，性能全面超越前代产品',meta:'科技日报 · 2小时前 · 1.2万阅读',img:'📰'},
+    {title:'全国多地降温！这个周末气温骤降十度以上',meta:'天气网 · 4小时前 · 8900阅读',img:'🌦'},
+    {title:'NBA季后赛首轮：湖人险胜掘金，系列赛扳平',meta:'体育周刊 · 5小时前 · 3.4万阅读',three:true},
+    {title:'OpenAI发布新一代模型，性能全面超越前代产品',meta:'科技日报 · 2小时前 · 1.2万阅读',img:'📰'},
+    {title:'全国多地降温！这个周末气温骤降十度以上',meta:'天气网 · 4小时前 · 8900阅读',img:'🌦'},
+    {title:'NBA季后赛首轮：湖人险胜掘金，系列赛扳平',meta:'体育周刊 · 5小时前 · 3.4万阅读',three:true},
+    {title:'OpenAI发布新一代模型，性能全面超越前代产品',meta:'科技日报 · 2小时前 · 1.2万阅读',img:'📰'},
+    {title:'全国多地降温！这个周末气温骤降十度以上',meta:'天气网 · 4小时前 · 8900阅读',img:'🌦'},
+    {title:'NBA季后赛首轮：湖人险胜掘金，系列赛扳平',meta:'体育周刊 · 5小时前 · 3.4万阅读',three:true},    
+  ],
+  热榜:[
+    {title:'#高温橙色预警# 局地超40度，多省启动应急预案',meta:'热搜 · 刚刚 · 8.8万阅读',img:'🔥'},
+    {title:'知名演员宣布隐退：感谢一路陪伴，需要休息',meta:'娱乐前线 · 1小时前 · 5.2万阅读',img:'🎬'},
+  ],
+  视频:[
+    {type:'interact', action:'navigate', title:'📍 跳转原生页面', desc:'点击后通知 App 打开原生路由页面', btnText:'跳转到设置页'},
+    {type:'interact', action:'login',    title:'🔐 触发登录', desc:'网页检测未登录，请求 App 弹出登录弹窗', btnText:'请求登录'},
+    {type:'interact', action:'share',    title:'📤 调用原生分享', desc:'使用系统分享面板分享当前内容', btnText:'分享'},
+    {type:'interact', action:'pay',      title:'💳 发起支付', desc:'网页发起支付请求，App 处理后回传结果', btnText:'支付 ¥9.9'},
+    {type:'interact', action:'location', title:'📌 获取定位', desc:'请求 App 获取当前 GPS 坐标并回传给网页', btnText:'获取位置'},
+    {type:'interact', action:'scan',     title:'📷 调用扫码', desc:'打开原生扫码页面，结果回传给网页', btnText:'扫一扫'},
+    {type:'interact', action:'copy',     title:'📋 复制到剪贴板', desc:'通知 App 把内容写入系统剪贴板', btnText:'复制链接'},
+    {type:'interact', action:'toast',    title:'💬 原生 Toast', desc:'让 App 弹出原生 Toast 提示', btnText:'弹出提示'},
+    {type:'interact', action:'badge',    title:'🔴 更新角标', desc:'通知 App 更新 TabBar 角标数字', btnText:'设置角标 +3'},
+    {type:'interact', action:'close',    title:'❌ 关闭当前页', desc:'通知 App 关闭当前 WebView 页面', btnText:'关闭页面'},
+  ],
+  娱乐:[
+    {type:'uni', group:'一、交互反馈',
+      items:[
+        {label:'showToast success', action:'showToast', params:{title:'操作成功',icon:'success'}},
+        {label:'showToast none',    action:'showToast', params:{title:'这是提示',icon:'none'}},
+        {label:'showLoading',       action:'showLoading', params:{title:'加载中...'}},
+        {label:'hideLoading',       action:'hideLoading', params:{}},
+        {label:'showModal',         action:'showModal', params:{title:'确认操作',content:'是否继续？'}},
+        {label:'showActionSheet',   action:'showActionSheet', params:{itemList:['选项A','选项B','选项C']}},
+      ]
+    },
+    {type:'uni', group:'二、页面路由',
+      items:[
+        {label:'navigateBack',        action:'navigateBack', params:{delta:1}},
+        {label:'navigateBack delta:2',action:'navigateBack', params:{delta:2}},
+        {label:'reLaunch 首页',       action:'reLaunch', params:{url:'/pages/index/index'}},
+      ]
+    },
+    {type:'uni', group:'三、数据缓存',
+      items:[
+        {label:'setStorage',    action:'setStorage',    params:{key:'demo_key',value:'hello_world'}},
+        {label:'getStorage',    action:'getStorage',    params:{key:'demo_key'}},
+        {label:'removeStorage', action:'removeStorage', params:{key:'demo_key'}},
+        {label:'clearStorage',  action:'clearStorage',  params:{}},
+      ]
+    },
+    {type:'uni', group:'六、导航栏',
+      items:[
+        {label:'setNavTitle',      action:'setNavTitle', params:{title:'新标题'}},
+        {label:'setNavColor 黑底白字', action:'setNavColor', params:{frontColor:'#ffffff',backgroundColor:'#000000'}},
+        {label:'setNavColor 白底黑字', action:'setNavColor', params:{frontColor:'#000000',backgroundColor:'#ffffff'}},
+      ]
+    },
+    {type:'uni', group:'八、图片/媒体',
+      items:[
+        {label:'chooseImage',  action:'chooseImage',  params:{count:1}},
+        {label:'previewImage', action:'previewImage', params:{urls:['https://picsum.photos/400/300','https://picsum.photos/400/301']}},
+        {label:'chooseMedia',  action:'chooseMedia',  params:{}},
+      ]
+    },
+    {type:'uni', group:'九、剪贴板',
+      items:[
+        {label:'setClipboard', action:'setClipboard', params:{data:'复制的内容 https://example.com'}},
+      ]
+    },
+    {type:'uni', group:'十一、平台判断',
+      items:[
+        {label:'getSystemInfo', action:'getSystemInfo', params:{}},
+      ]
+    },
+    {type:'uni', group:'十三、文件',
+      items:[
+        {label:'openDocument（需先有文件）', action:'openDocument', params:{filePath:''}},
+      ]
+    },
+  ],
+};
+
+function disp(ch){return customNames[ch]||ch;}
+
+function renderBar(){
+  const el=document.getElementById('chList');
+  el.innerHTML=myChannels.map(ch=>`<div class="ch-item ${ch===activeChannel?'on':''}" data-ch="${ch}">${disp(ch)}<div class="ch-ul"></div></div>`).join('');
+  el.querySelectorAll('.ch-item').forEach(e=>e.onclick=()=>{activeChannel=e.dataset.ch;renderBar();renderFeed();});
+}
+
+function sendToApp(action, data){
+  console.log('[demo7] sendToApp', action, typeof uni, typeof uni?.webView)
+  if(typeof uni == 'undefined' || typeof uni.webView == 'undefined'){
+    showResult(`❌ uni.webView 不存在`, '请确认 uni-webview.js 已加载');
+    return;
+  }
+  uni.webView.postMessage({data:{action, ...data}});
+  showResult(`已发送: ${action}`, JSON.stringify(data||{}));
+}
+
+function showResult(title, detail){
+  const el=document.getElementById('interactResult')||document.getElementById('uniResult');
+  if(!el) return;
+  el.innerHTML=`<b>${title}</b><br><span style="font-size:11px;color:var(--color-text-tertiary)">${detail}</span>`;
+  el.style.display='block';
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>el.style.display='none', 3000);
+}
+
+// App 通过 evalJS 回传结果时调用此函数
+window.onAppCallback=function(action, result){
+  showResult(`App 回传 [${action}]`, JSON.stringify(result));
+};
+
+function renderFeed(){
+  const area=document.getElementById('feedArea');
+  const feeds=FEEDS[activeChannel]||FEEDS['推荐'];
+
+  if(activeChannel=='视频'){
+    area.innerHTML=`
+      <div id="interactResult" style="display:none;margin:12px 16px;padding:10px 14px;background:rgba(229,57,53,0.08);border-left:3px solid #E53935;border-radius:4px;font-size:13px;color:var(--color-text-primary);line-height:1.6;"></div>
+      ${feeds.map(f=>`
+      <div class="fi" style="flex-direction:column;gap:6px;">
+        <div class="ftitle">${f.title}</div>
+        <div class="fmeta">${f.desc}</div>
+        <button onclick="sendToApp('${f.action}',{from:'webview'})" style="align-self:flex-start;margin-top:4px;padding:6px 16px;background:#E53935;color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;">${f.btnText}</button>
+      </div>`).join('')}`;
+    return;
+  }
+
+  if(activeChannel=='娱乐'){
+    area.innerHTML=`
+      <div id="uniResult" style="display:none;position:sticky;top:0;z-index:10;margin:0;padding:10px 16px;background:rgba(229,57,53,0.08);border-bottom:2px solid #E53935;font-size:13px;color:var(--color-text-primary);line-height:1.6;"></div>
+      ${feeds.map(group=>`
+        <div style="padding:10px 16px 4px;font-size:12px;font-weight:600;color:#E53935;background:var(--color-background-secondary);">${group.group}</div>
+        ${group.items.map(item=>`
+          <div class="fi" style="align-items:center;padding:10px 16px;">
+            <div style="flex:1;font-size:14px;color:var(--color-text-primary);">${item.label}</div>
+            <button onclick='sendToApp("${item.action}",${JSON.stringify(item.params)})' style="flex-shrink:0;padding:5px 12px;background:#E53935;color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;">调用</button>
+          </div>`).join('')}
+      `).join('')}`;
+    return;
+  }
+
+  area.innerHTML=feeds.map(f=>{
+    if(f.three) return `<div class="fi f3"><div style="flex:1"><div class="ftitle">${f.title}</div><div class="f3imgs"><div>📷</div><div>📷</div><div>📷</div></div><div class="fmeta" style="margin-top:8px">${f.meta}</div></div></div>`;
+    return `<div class="fi"><div style="flex:1"><div class="ftitle">${f.title}</div><div class="fmeta">${f.meta}</div></div><div class="fthumb">${f.img}</div></div>`;
+  }).join('');
+}
+
+function renderManage(){
+  document.getElementById('myTip').textContent=`共${myChannels.length}个`;
+  const area=document.getElementById('myArea');
+
+  if(!isEditing){
+    area.innerHTML=`<div class="chip-grid">${myChannels.map(ch=>`<div class="chip ${ch===activeChannel?'active-ch':''}" data-ch="${ch}">${disp(ch)}</div>`).join('')}</div>`;
+    area.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{
+      activeChannel=el.dataset.ch;
+      renderBar(); renderFeed(); closeMgr();
+    });
+  } else {
+    area.innerHTML=`<div id="myRows">${myChannels.map((ch,i)=>`
+      <div class="ch-row" data-idx="${i}">
+        <div class="row-left">
+          <div class="row-drag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="18" x2="16" y2="18"/></svg></div>
+          <div class="row-name">${disp(ch)}${customNames[ch]?`<span class="custom-tag">改</span>`:''}</div>
+        </div>
+        <div class="row-actions">
+          <div class="row-btn up-ico ${i==0?'disabled':''}" data-idx="${i}" data-dir="up"><svg viewBox="0 0 24 24"><polygon points="12,6 20,18 4,18" fill="currentColor"/></svg></div>
+          <div class="row-btn down-ico ${i==myChannels.length-1?'disabled':''}" data-idx="${i}" data-dir="down"><svg viewBox="0 0 24 24"><polygon points="12,18 20,6 4,6" fill="currentColor"/></svg></div>
+          <div class="row-btn edit-ico" data-ch="${ch}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
+          <div class="row-btn del-ico" data-ch="${ch}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg></div>
+        </div>
+      </div>`).join('')}</div>`;
+
+    const rows=document.getElementById('myRows');
+    rows.querySelectorAll('.row-btn.up-ico,.row-btn.down-ico').forEach(b=>b.onclick=()=>{
+      if(b.classList.contains('disabled')) return;
+      const idx=parseInt(b.dataset.idx);
+      const dir=b.dataset.dir;
+      const swapIdx=dir=='up'?idx-1:idx+1;
+      const tmp=myChannels[idx]; myChannels[idx]=myChannels[swapIdx]; myChannels[swapIdx]=tmp;
+      renderBar(); renderManage();
+      // 高亮移动后的目标行
+      const newRows=document.querySelectorAll('#myRows .ch-row');
+      const targetRow=newRows[swapIdx];
+      if(targetRow){
+        targetRow.classList.remove('moved');
+        void targetRow.offsetWidth; // 强制重绘，重新触发动画
+        targetRow.classList.add('moved');
+      }
+    });
+    rows.querySelectorAll('.row-btn.edit-ico').forEach(b=>b.onclick=()=>openRename(b.dataset.ch));
+    rows.querySelectorAll('.row-btn.del-ico').forEach(b=>b.onclick=()=>openDelete(b.dataset.ch));
+    bindTouchDrag(rows);
+  }
+
+  const rg=document.getElementById('recGrid');
+  rg.innerHTML=recChannels.map(ch=>`<div class="rec-chip" data-ch="${ch}"><span class="bplus">＋</span>${disp(ch)}</div>`).join('');
+  rg.querySelectorAll('.rec-chip').forEach(el=>el.onclick=()=>{
+    recChannels=recChannels.filter(c=>c!==el.dataset.ch);
+    myChannels.push(el.dataset.ch);
+    renderBar(); renderManage();
+  });
+}
+
+function openMgr(){isEditing=false;document.getElementById('editBtn').textContent='编辑';document.getElementById('mgr').classList.add('show');renderManage();}
+function closeMgr(){document.getElementById('mgr').classList.remove('show');}
+
+function openRename(ch){
+  renameTarget=ch;
+  const inp=document.getElementById('rnInput');
+  inp.value=disp(ch);
+  document.getElementById('rnOrig').textContent=ch!==disp(ch)?`原始名称：${ch}`:'';
+  document.getElementById('rnHint').textContent='';
+  document.getElementById('renameModal').classList.add('show');
+  setTimeout(()=>inp.focus(),80);
+}
+function closeRename(){document.getElementById('renameModal').classList.remove('show');renameTarget=null;}
+
+function openDelete(ch){
+  deleteTarget=ch;
+  document.getElementById('delSub').textContent=`确认删除「${disp(ch)}」频道？删除后可从推荐频道重新添加。`;
+  document.getElementById('delModal').classList.add('show');
+}
+function closeDelete(){document.getElementById('delModal').classList.remove('show');deleteTarget=null;}
+
+document.getElementById('openMgr').onclick=openMgr;
+document.getElementById('mgrBack').onclick=closeMgr;
+document.getElementById('mgrDone').onclick=closeMgr;
+document.getElementById('editBtn').onclick=()=>{
+  isEditing=!isEditing;
+  document.getElementById('editBtn').textContent=isEditing?'完成':'编辑';
+  renderManage();
+};
+document.getElementById('rnCancel').onclick=closeRename;
+document.getElementById('rnConfirm').onclick=()=>{
+  const val=document.getElementById('rnInput').value.trim();
+  if(!val){document.getElementById('rnHint').textContent='名称不能为空';return;}
+  if(renameTarget) customNames[renameTarget]=val;
+  closeRename(); renderBar(); renderManage();
+};
+document.getElementById('rnInput').oninput=function(){
+  const l=8-this.value.length;
+  document.getElementById('rnHint').textContent=l<=3?`还可输入 ${Math.max(0,l)} 字`:'';
+};
+document.getElementById('rnInput').onkeydown=function(e){
+  if(e.key==='Enter') document.getElementById('rnConfirm').click();
+  if(e.key==='Escape') closeRename();
+};
+document.getElementById('delCancel').onclick=closeDelete;
+document.getElementById('delConfirm').onclick=()=>{
+  if(!deleteTarget)return;
+  myChannels=myChannels.filter(c=>c!==deleteTarget);
+  recChannels.unshift(deleteTarget);
+  if(activeChannel===deleteTarget) activeChannel='推荐';
+  closeDelete(); renderBar(); renderManage();
+};
+
+renderBar(); renderFeed();
+</script>
+</body>
+</html>

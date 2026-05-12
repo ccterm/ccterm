@@ -1,0 +1,28 @@
+<script lang="uts">
+export default {
+  onLaunch() {
+    console.log('[CCTerm] App launched')
+    try {
+      const saved = uni.getStorageSync('ccterm_connection') as string | ""
+      if (saved !== null && saved !=='' && saved.length > 0) {
+        const config = JSON.parse<UTSJSONObject>(saved) as UTSJSONObject
+        console.log('[CCTerm] Found saved connection:', config.host)
+      }
+    } catch (e) {}
+  },
+  onShow() {
+    console.log('[CCTerm] App show')
+  },
+  onHide() {
+    console.log('[CCTerm] App hide')
+  }
+}
+</script>
+
+<style>
+page {
+  background-color: #0c0c0c;
+  color: #cccccc;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+</style>
