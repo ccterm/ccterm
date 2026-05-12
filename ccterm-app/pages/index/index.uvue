@@ -1,18 +1,50 @@
 <template>
-			<view :style="{ height: statusBarHeight + 'px', backgroundColor: '#ffffff' }" />
-	<web-view
-		:src="REMOTE_URL"
-		style="flex: 1;"
-	></web-view>
+  <view style="flex:1;background:#000;">
+    <web-view :src="webUrl" style="flex:1;"></web-view>
+    <view class="scan-btn" @tap="handleScan">
+      <text style="font-size:28px;">📷</text>
+    </view>
+  </view>
 </template>
 
 <script lang="uts">
-	export default {
-		data() {
-			return {
-				statusBarHeight : 24 as number,
-				REMOTE_URL: 'hybrid/html/index.html' as string
-			}
-		}
-	}
+export default {
+  data() {
+    return {
+      webUrl: 'hybrid/html/index.html' as string
+    }
+  },
+  methods: {
+    handleScan() {
+      const self = this
+      uni.scanCode({
+        onlyFromCamera: true,
+        scanType: ['qrCode'],
+        success(res: ScanCodeSuccess) {
+          const raw = res.result
+          if (raw.length > 0) {
+            self.webUrl = 'hybrid/html/index.html?qr=' + encodeURIComponent(raw)
+          }
+        },
+        fail(err: ScanCodeFail) {}
+      })
+    }
+  }
+}
 </script>
+
+<style>
+.scan-btn {
+  position: absolute;
+  bottom: 30px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  background: #0078d4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+</style>
