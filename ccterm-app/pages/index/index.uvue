@@ -1,5 +1,6 @@
 <template>
   <view style="flex:1;background:#000;">
+	  			<view :style="{ height: statusBarHeight + 'px', backgroundColor: '#000' }" />
     <web-view :src="webUrl" style="flex:1;"></web-view>
     <view class="scan-btn" @tap="handleScan">
       <text style="font-size:28px;">📷</text>
@@ -11,6 +12,7 @@
 export default {
   data() {
     return {
+		statusBarHeight : 24 as number,
       webUrl: 'hybrid/html/index.html' as string
     }
   },

@@ -5,262 +5,399 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>CCTerm</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#0c0c0c;color:#ccc;font-family:-apple-system,sans-serif;overflow:hidden;height:100vh}
-.page{display:flex;flex-direction:column;height:100vh}
-.top-bar{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#0f0f0f;min-height:42px}
-.dot{width:8px;height:8px;border-radius:50%}.dot.red{background:#e74856}.dot.green{background:#16c60c}.dot.yellow{background:#f9a825}
-.status{display:flex;align-items:center;gap:6px;font-size:11px;color:#888}
-.btn{padding:5px 10px;font-size:11px;border:none;border-radius:4px;cursor:pointer;color:#fff}
-.btn-back{background:#333}.btn-off{background:#a03030}
-.tab-bar{display:flex;background:#111;min-height:34px;align-items:center}
-.tab-scroll{flex:1;display:flex;overflow-x:auto;scrollbar-width:none}
-.tab-scroll::-webkit-scrollbar{display:none}
-.tab-btn{padding:5px 12px;font-size:11px;white-space:nowrap;color:#888;border-bottom:2px solid transparent;cursor:pointer}
-.tab-btn.active{color:#0078d4;border-color:#0078d4}
-.tab-add{padding:5px 12px;font-size:15px;color:#888;cursor:pointer}
-.toolbar{display:flex;gap:1px;background:#111;padding:3px 6px}
-.tool-btn{padding:3px 8px;font-size:10px;color:#888;border-radius:3px;cursor:pointer}
-.tool-btn.active{color:#0078d4;background:#1a2a3a}
-.panel{background:#1a1a1a;max-height:150px;overflow-y:auto;padding:2px 0}
-.panel-item{padding:7px 14px;font-size:11px;cursor:pointer;border-bottom:1px solid #222}
-.panel-item:active{background:#252525}
-.panel-empty{padding:14px;font-size:11px;color:#666;text-align:center}
-.hist-cmd{display:block;color:#ccc;font-family:monospace}
-.hist-meta{display:block;font-size:9px;color:#666;margin-top:1px}
-.cwd-bar{padding:2px 10px;font-size:9px;color:#555;background:#0f0f0f}
-.terminal{flex:1;overflow-y:auto;padding:6px 10px;font-family:'Cascadia Code','Fira Code',monospace;font-size:12px;line-height:1.35}
-.term-line{white-space:pre-wrap;word-break:break-all;min-height:17px}
-.term-empty{color:#555;font-size:12px;text-align:center;padding-top:30px}
-.key-row{display:flex;flex-wrap:wrap;gap:2px;padding:3px 4px;background:#111}
-.key-btn{padding:5px 7px;font-size:9px;background:#1e1e1e;color:#aaa;border:none;border-radius:3px;cursor:pointer;min-width:28px;text-align:center}
-.key-btn:active{background:#333}.key-btn.wide{min-width:42px}
-.input-bar{display:flex;gap:3px;padding:5px 6px;background:#111}
-.cmd-input{flex:1;padding:7px 8px;font-size:13px;background:#0c0c0c;border:1px solid #333;border-radius:4px;color:#fff;font-family:monospace;outline:none}
-.send-btn{padding:7px 12px;font-size:11px;background:#0078d4;color:#fff;border:none;border-radius:4px;cursor:pointer}
-.enter-btn{padding:7px 12px;font-size:11px;background:#16a34a;color:#fff;border:none;border-radius:4px;cursor:pointer}
-.conn-page{padding:16px 14px}
-.header{text-align:center;padding:24px 0 16px}
-.logo-dots{display:flex;justify-content:center;gap:5px;margin-bottom:6px}
-.ld{width:10px;height:10px;border-radius:50%}.lr{background:#e74856}.ly{background:#f9a825}.lg{background:#16c60c}
-.title{font-size:24px;font-weight:700;color:#fff}
-.subtitle{font-size:12px;color:#888;margin-top:3px}
-.card{margin:0 0 12px;padding:16px;background:#1a1a1a;border-radius:10px}
-.card-title{font-size:14px;font-weight:600;color:#ddd;margin-bottom:12px}
-.scan-hint{padding:12px;background:#222;border-radius:6px;text-align:center;color:#0078d4;font-size:13px;margin-bottom:10px}
-.divider{display:flex;align-items:center;margin:16px 0;gap:10px}
-.divider .line{flex:1;height:1px;background:#333}
-.divider-text{font-size:10px;color:#666}
-.mode-tabs{display:flex;gap:6px;margin-bottom:12px}
-.mode-tab{flex:1;text-align:center;padding:6px;font-size:11px;color:#666;background:#222;border-radius:5px;cursor:pointer}
-.mode-tab.active{color:#0078d4;background:#1a2a3a}
-.form-group{margin-bottom:8px}
-.label{display:block;font-size:10px;color:#888;margin-bottom:2px}
-.input{width:100%;padding:8px 10px;font-size:13px;background:#0c0c0c;border:1px solid #333;border-radius:5px;color:#fff;outline:none}
-.input:focus{border-color:#0078d4}
-.input-row{display:flex;gap:8px}.flex-1{flex:1}.flex-2{flex:2}
-.error-msg{color:#e74856;font-size:11px;padding:5px 0;text-align:center}
-.conn-btn{padding:12px;text-align:center;font-size:14px;font-weight:600;color:#fff;background:#0078d4;border-radius:8px;cursor:pointer;margin-top:3px}
-.recent-item{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #222;cursor:pointer}
-.recent-host{font-size:12px;color:#ccc;font-family:monospace}
-.recent-mode{font-size:9px;padding:2px 4px;color:#888;background:#252525;border-radius:3px}
-.clear-recent{padding:10px 0 0;text-align:center;font-size:11px;color:#666;cursor:pointer}
-.hidden{display:none!important}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0c0c0c; color: #ccc; font-family: -apple-system, BlinkMacSystemFont, sans-serif; overflow: hidden; height: 100vh; }
+.page { display: flex; flex-direction: column; height: 100vh; }
+
+/* -- Terminal page top bar -- */
+.top-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #0f0f0f; min-height: 44px; }
+.status { display: flex; align-items: center; gap: 6px; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; }
+.status-dot.red { background: #e74856; }
+.status-dot.green { background: #16c60c; }
+.status-dot.yellow { background: #f9a825; }
+.status-text { font-size: 11px; color: #888; }
+.btn { padding: 6px 12px; font-size: 12px; border: none; border-radius: 4px; cursor: pointer; color: #fff; }
+.btn-back { background: #333; }
+.btn-disconnect { background: #a03030; }
+
+/* -- Tab bar -- */
+.tab-bar { display: flex; background: #111; min-height: 36px; align-items: center; }
+.tab-scroll { flex: 1; display: flex; overflow-x: auto; }
+.tab-scroll::-webkit-scrollbar { display: none; }
+.tab-btn { padding: 6px 14px; font-size: 12px; white-space: nowrap; color: #888; border-bottom: 2px solid transparent; cursor: pointer; }
+.tab-btn.active { color: #0078d4; border-color: #0078d4; }
+.tab-add { padding: 6px 14px; font-size: 16px; color: #888; cursor: pointer; }
+
+/* -- Toolbar -- */
+.toolbar { display: flex; gap: 1px; background: #111; padding: 4px 8px; }
+.tool-btn { padding: 4px 10px; font-size: 11px; color: #888; border-radius: 3px; cursor: pointer; }
+.tool-btn.active { color: #0078d4; background: #1a2a3a; }
+
+/* -- Panels -- */
+.panel { background: #1a1a1a; max-height: 160px; overflow-y: auto; padding: 4px 0; }
+.panel-item { padding: 8px 16px; font-size: 12px; cursor: pointer; border-bottom: 1px solid #222; }
+.panel-item:active { background: #252525; }
+.panel-empty { padding: 16px; font-size: 12px; color: #666; text-align: center; }
+.hist-cmd { display: block; color: #ccc; font-family: monospace; }
+.hist-meta { display: block; font-size: 10px; color: #666; margin-top: 2px; }
+
+/* -- CWD bar -- */
+.cwd-bar { padding: 2px 12px; font-size: 10px; color: #555; background: #0f0f0f; }
+
+/* -- Terminal display -- */
+.terminal { flex: 1; overflow-y: auto; padding: 8px 12px; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 13px; line-height: 1.4; }
+.term-line { white-space: pre-wrap; word-break: break-all; min-height: 18px; }
+.term-empty { color: #555; font-size: 13px; text-align: center; padding-top: 40px; }
+
+/* -- Key row -- */
+.key-row { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 6px; background: #111; }
+.key-btn { padding: 6px 8px; font-size: 10px; background: #1e1e1e; color: #aaa; border: none; border-radius: 3px; cursor: pointer; min-width: 32px; text-align: center; }
+.key-btn:active { background: #333; }
+.key-btn.wide { min-width: 48px; }
+
+/* -- Input bar -- */
+.input-bar { display: flex; gap: 4px; padding: 6px 8px; background: #111; }
+.cmd-input { flex: 1; padding: 8px 10px; font-size: 14px; background: #0c0c0c; border: 1px solid #333; border-radius: 4px; color: #fff; font-family: monospace; outline: none; }
+.send-btn { padding: 8px 14px; font-size: 12px; background: #0078d4; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+.enter-btn { padding: 8px 14px; font-size: 12px; background: #16a34a; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+
+/* -- Connect page -- */
+.conn-page { padding: 0 16px; }
+.header { padding: 40px 24px 32px; text-align: center; }
+.logo-row { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.logo-dots { display: flex; gap: 6px; }
+.ld { width: 12px; height: 12px; border-radius: 50%; }
+.ld.red { background: #e74856; }
+.ld.yellow { background: #f9a825; }
+.ld.green { background: #16c60c; }
+.title { font-size: 28px; font-weight: 700; color: #fff; }
+.subtitle { display: block; margin-top: 8px; font-size: 14px; color: #888; }
+
+.card { margin: 0 0 16px; padding: 20px; background: #1a1a1a; border-radius: 12px; border: 1px solid #2a2a2a; }
+.card-title { font-size: 16px; font-weight: 600; color: #ddd; margin-bottom: 16px; }
+
+/* Scan hint */
+.scan-hint { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 16px; background: #0078d4; border-radius: 10px; color: #fff; font-size: 16px; font-weight: 500; margin-bottom: 16px; }
+
+/* Divider */
+.divider { display: flex; align-items: center; margin: 20px 0; gap: 12px; }
+.divider .line { flex: 1; height: 1px; background: #333; }
+.divider-text { font-size: 12px; color: #666; }
+
+/* Mode tabs */
+.mode-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.mode-tab { flex: 1; text-align: center; padding: 8px; font-size: 13px; color: #666; background: #222; border-radius: 6px; border: 1px solid transparent; cursor: pointer; }
+.mode-tab.active { color: #0078d4; border-color: #0078d4; background: #1a2a3a; }
+
+/* Form */
+.form { display: flex; flex-direction: column; gap: 14px; }
+.form-group { margin-bottom: 0; }
+.label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; }
+.input { width: 100%; padding: 10px 12px; font-size: 14px; background: #0c0c0c; border: 1px solid #333; border-radius: 6px; color: #fff; outline: none; }
+.input:focus { border-color: #0078d4; }
+.input-row { display: flex; gap: 12px; }
+.flex-1 { flex: 1; }
+.flex-2 { flex: 2; }
+
+/* Error */
+.error-msg { color: #e74856; font-size: 13px; padding: 8px 0; text-align: center; }
+
+/* Connect button */
+.conn-btn { margin-top: 4px; padding: 14px; text-align: center; font-size: 16px; font-weight: 600; color: #fff; background: #0078d4; border-radius: 10px; cursor: pointer; }
+.conn-btn:active { background: #1a8ad4; }
+
+/* Recent */
+.recent-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #222; cursor: pointer; }
+.recent-item:active { opacity: 0.7; }
+.recent-info { display: flex; align-items: center; gap: 10px; }
+.recent-host { font-size: 14px; color: #ccc; font-family: monospace; }
+.recent-mode { font-size: 11px; padding: 2px 6px; color: #888; background: #252525; border-radius: 4px; }
+.recent-arrow { font-size: 16px; color: #555; }
+.clear-recent { padding: 14px 0 0; text-align: center; font-size: 13px; color: #666; cursor: pointer; }
+.clear-recent:active { color: #e74856; }
+
+/* Footer */
+.footer { padding: 24px 16px; text-align: center; }
+.footer-text { display: block; font-size: 12px; color: #555; line-height: 1.8; }
+
+.hidden { display: none !important; }
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
-(function(){
+(function() {
 var S = {
-  view:'connect', mode:'relay', host:'', port:'', room:'', token:'',
-  connecting:false, errorMsg:'',
-  conn:null, connected:false, lastUpdate:0, pollTimer:null, reconnectTimer:null, reconnectAttempts:0,
-  activeSessionId:'', sessions:[], workspaceFolders:[], historyRecords:[],
-  terminalLines:[], cursorRow:-1, cwd:'', autoScroll:true,
-  cmdText:'', inputHistory:[], historyIdx:-1, openPanel:'',
-  recentList:[], httpGet:null, httpPost:null
+  view: 'connect', mode: 'relay', host: '', port: '', room: '', token: '',
+  connecting: false, errorMsg: '',
+  conn: null, connected: false, lastUpdate: 0, pollTimer: null, reconnectTimer: null, reconnectAttempts: 0,
+  activeSessionId: '', sessions: [], workspaceFolders: [], historyRecords: [],
+  terminalLines: [], cursorRow: -1, cwd: '', autoScroll: true,
+  cmdText: '', inputHistory: [], historyIdx: -1, openPanel: '',
+  recentList: [], httpGet: null, httpPost: null
 };
 
-function el(id){return document.getElementById(id)}
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-function norm(p){return(p||'').replace(/\\/g,'/').replace(/\/+$/,'').toLowerCase()}
-var ANSI={'0':'#0c0c0c','1':'#c50f1f','2':'#13a10e','3':'#c19c00','4':'#0037da','5':'#881798','6':'#3a96dd','7':'#ccc','8':'#767676','9':'#e74856','10':'#16c60c','11':'#f9f1a5','12':'#3b78ff','13':'#b4009e','14':'#61d6d6','15':'#f2f2f2'};
-function aStyle(l){var s=[];if(l.fg!==undefined&&l.fg!==7)s.push('color:'+(ANSI[String(l.fg)]||'#ccc'));if(l.bold)s.push('font-weight:bold');if(l.italic)s.push('font-style:italic');if(l.underline)s.push('text-decoration:underline');return s.join(';')}
+function el(id) { return document.getElementById(id); }
+function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function norm(p) { return (p || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase(); }
 
-// Storage
-function sConn(c){try{localStorage.setItem('ccterm_conn',JSON.stringify(c))}catch(e){}}
-function lConn(){try{var r=localStorage.getItem('ccterm_conn');return r?JSON.parse(r):null}catch(e){return null}}
-function lRecent(){try{var r=localStorage.getItem('ccterm_recent');return r?JSON.parse(r):[]}catch(e){return[]}}
-function sRecent(l){try{localStorage.setItem('ccterm_recent',JSON.stringify(l))}catch(e){}}
+var ANSI = { '0': '#0c0c0c', '1': '#c50f1f', '2': '#13a10e', '3': '#c19c00', '4': '#0037da', '5': '#881798', '6': '#3a96dd', '7': '#ccc', '8': '#767676', '9': '#e74856', '10': '#16c60c', '11': '#f9f1a5', '12': '#3b78ff', '13': '#b4009e', '14': '#61d6d6', '15': '#f2f2f2' };
 
-// QR Parser
-function parseQR(raw){
-  if(!raw)return null;
-  try{var j=JSON.parse(raw);if(j.host&&j.port)return{mode:j.mode||(j.room?'relay':'http'),host:j.host,port:j.port,room:j.room||'',token:j.token||''}}catch(e){}
-  var m=raw.match(/^(https?|wss?):\/\/([^/:?]+)(?::(\d+))?(\/[^?]*)?(?:\?(.*))?$/);
-  if(m){
-    var pr=m[1],h=m[2],p=parseInt(m[3])||0;
-    if(p<=0||p>65535)p=(pr==='https:'||pr==='wss:')?443:(pr==='ws:')?80:3001;
-    var q=(m[5]||''),pm={};
-    q.split('&').forEach(function(x){var ei=x.indexOf('=');if(ei>=0)pm[decodeURIComponent(x.substring(0,ei))]=decodeURIComponent(x.substring(ei+1))});
-    var r=pm.room||'';
-    return{mode:r?'relay':'http',host:h,port:p,room:r,token:pm.token||''};
+function aStyle(l) {
+  var s = [];
+  if (l.fg !== undefined && l.fg !== 7) s.push('color:' + (ANSI[String(l.fg)] || '#ccc'));
+  if (l.bold) s.push('font-weight:bold');
+  if (l.italic) s.push('font-style:italic');
+  if (l.underline) s.push('text-decoration:underline');
+  return s.join(';');
+}
+
+// ---- Storage ----
+function sConn(c) { try { localStorage.setItem('ccterm_conn', JSON.stringify(c)); } catch (e) {} }
+function lConn() { try { var r = localStorage.getItem('ccterm_conn'); return r ? JSON.parse(r) : null; } catch (e) { return null; } }
+function lRecent() { try { var r = localStorage.getItem('ccterm_recent'); return r ? JSON.parse(r) : []; } catch (e) { return []; } }
+function sRecent(l) { try { localStorage.setItem('ccterm_recent', JSON.stringify(l)); } catch (e) {} }
+
+// ---- QR Parser ----
+function parseQR(raw) {
+  if (!raw) return null;
+  try {
+    var j = JSON.parse(raw);
+    if (j.host && j.port) return { mode: j.mode || (j.room ? 'relay' : 'http'), host: j.host, port: j.port, room: j.room || '', token: j.token || '' };
+  } catch (e) {}
+  var m = raw.match(/^(https?|wss?):\/\/([^/:?]+)(?::(\d+))?(\/[^?]*)?(?:\?(.*))?$/);
+  if (m) {
+    var pr = m[1], h = m[2], p = parseInt(m[3]) || 0;
+    if (p <= 0 || p > 65535) p = (pr === 'https:' || pr === 'wss:') ? 443 : (pr === 'ws:') ? 80 : 3001;
+    var q = (m[5] || ''), pm = {};
+    q.split('&').forEach(function(x) { var ei = x.indexOf('='); if (ei >= 0) pm[decodeURIComponent(x.substring(0, ei))] = decodeURIComponent(x.substring(ei + 1)); });
+    var r = pm.room || '';
+    return { mode: r ? 'relay' : 'http', host: h, port: p, room: r, token: pm.token || '' };
   }
-  if(raw.indexOf('ccterm://')===0){
-    var rest=raw.slice('ccterm://'.length),si=rest.indexOf('/'),hp=si>=0?rest.substring(0,si):rest,pq=si>=0?rest.substring(si+1):'';
-    var ci=hp.indexOf(':'),h2=ci>=0?hp.substring(0,ci):hp,p2=3001;
-    if(ci>=0){var pn=parseInt(hp.substring(ci+1));if(pn>0&&pn<=65535)p2=pn}
-    var rm=pq,tk='';
-    if(rm.indexOf('?')>=0){var qi=rm.indexOf('?');var qs2=rm.substring(qi+1);rm=rm.substring(0,qi);qs2.split('&').forEach(function(x){var ei=x.indexOf('=');if(ei>=0&&decodeURIComponent(x.substring(0,ei))==='token')tk=decodeURIComponent(x.substring(ei+1))})}
-    return{mode:rm?'relay':'http',host:h2,port:p2,room:rm,token:tk};
+  if (raw.indexOf('ccterm://') === 0) {
+    var rest = raw.slice('ccterm://'.length), si = rest.indexOf('/'), hp = si >= 0 ? rest.substring(0, si) : rest, pq = si >= 0 ? rest.substring(si + 1) : '';
+    var ci = hp.indexOf(':'), h2 = ci >= 0 ? hp.substring(0, ci) : hp, p2 = 3001;
+    if (ci >= 0) { var pn = parseInt(hp.substring(ci + 1)); if (pn > 0 && pn <= 65535) p2 = pn; }
+    var rm = pq, tk = '';
+    if (rm.indexOf('?') >= 0) { var qi = rm.indexOf('?'); var qs2 = rm.substring(qi + 1); rm = rm.substring(0, qi);
+      qs2.split('&').forEach(function(x) { var ei = x.indexOf('='); if (ei >= 0 && decodeURIComponent(x.substring(0, ei)) === 'token') tk = decodeURIComponent(x.substring(ei + 1)); }); }
+    return { mode: rm ? 'relay' : 'http', host: h2, port: p2, room: rm, token: tk };
   }
   return null;
 }
 
-function doConnect(cfg){
-  S.mode=cfg.mode;S.host=cfg.host;S.port=cfg.port;S.room=cfg.room||'';S.token=cfg.token||'';
-  S.connecting=true;S.errorMsg='';S.reconnectAttempts=0;render();
-  sConn(cfg);addRecent(cfg);
-  if(cfg.mode==='relay')connectRelay(cfg);else connectHttp(cfg);
+// ---- Connect ----
+function doConnect(cfg) {
+  S.mode = cfg.mode; S.host = cfg.host; S.port = cfg.port; S.room = cfg.room || ''; S.token = cfg.token || '';
+  S.connecting = true; S.errorMsg = ''; S.reconnectAttempts = 0; render();
+  sConn(cfg); addRecent(cfg);
+  if (cfg.mode === 'relay') connectRelay(cfg); else connectHttp(cfg);
 }
 
-function connectRelay(cfg){
-  var url='ws://'+cfg.host+':'+cfg.port+'/?room='+encodeURIComponent(cfg.room||'')+'&role=phone';
-  console.log('[WS]',url);
-  var ws=new WebSocket(url);S.conn=ws;
-  ws.onopen=function(){
-    S.connected=true;S.lastUpdate=Date.now();S.reconnectAttempts=0;S.view='terminal';S.connecting=false;render();
-    relaySend({type:'requestSessions'});relaySend({type:'requestWorkspace'});relaySend({type:'requestHistory'});startPoll();
+function connectRelay(cfg) {
+  var url = 'ws://' + cfg.host + ':' + cfg.port + '/?room=' + encodeURIComponent(cfg.room || '') + '&role=phone';
+  var ws = new WebSocket(url); S.conn = ws;
+  ws.onopen = function() {
+    S.connected = true; S.lastUpdate = Date.now(); S.reconnectAttempts = 0; S.view = 'terminal'; S.connecting = false; render();
+    relaySend({ type: 'requestSessions' }); relaySend({ type: 'requestWorkspace' }); relaySend({ type: 'requestHistory' }); startPoll();
   };
-  ws.onmessage=function(e){try{handleRelay(JSON.parse(e.data))}catch(err){}}
-  ws.onclose=function(){S.connected=false;stopPoll();renderStatus();scheduleReconnect()}
-  ws.onerror=function(e){console.error('[WS]',e)}
+  ws.onmessage = function(e) { try { handleRelay(JSON.parse(e.data)); } catch (err) {} };
+  ws.onclose = function() { S.connected = false; stopPoll(); renderStatus(); scheduleReconnect(); };
+  ws.onerror = function(e) { console.error('[WS]', e); };
 }
-function relaySend(m){if(S.conn&&S.conn.readyState===WebSocket.OPEN)S.conn.send(JSON.stringify(m))}
-function handleRelay(m){
-  if(m.type==='sessions'){
-    S.sessions=m.data||[];
-    if(!S.activeSessionId&&S.sessions.length>0){S.activeSessionId=m.activeSessionId||S.sessions[0].id;relaySend({type:'requestSnapshot',sessionId:S.activeSessionId})}
-    else if(S.activeSessionId){var f=S.sessions.some(function(s){return s.id===S.activeSessionId});if(!f&&S.sessions.length>0){S.activeSessionId=S.sessions[0].id;relaySend({type:'requestSnapshot',sessionId:S.activeSessionId})}}
-    renderTabs()
-  }else if(m.type==='snapshot'){
-    if(m.sessionId===S.activeSessionId&&m.data&&m.data.lines){S.lastUpdate=Date.now();S.terminalLines=(m.data.lines||[]).map(function(l){return{text:l.text||'',fg:l.fg!==undefined?l.fg:7,bg:l.bg!==undefined?l.bg:0,bold:l.bold||false,italic:l.italic||false,underline:l.underline||false}});S.cursorRow=m.data.cursorRow;S.cwd=m.data.cwd||'';renderTerm()}
-  }else if(m.type==='workspace'){S.workspaceFolders=m.data||[];renderPanel()}
-  else if(m.type==='history'){S.historyRecords=m.data||[];renderPanel()}
+
+function relaySend(m) { if (S.conn && S.conn.readyState === WebSocket.OPEN) S.conn.send(JSON.stringify(m)); }
+
+function handleRelay(m) {
+  if (m.type === 'sessions') {
+    S.sessions = m.data || [];
+    if (!S.activeSessionId && S.sessions.length > 0) { S.activeSessionId = m.activeSessionId || S.sessions[0].id; relaySend({ type: 'requestSnapshot', sessionId: S.activeSessionId }); }
+    else if (S.activeSessionId) { var f = S.sessions.some(function(s) { return s.id === S.activeSessionId; }); if (!f && S.sessions.length > 0) { S.activeSessionId = S.sessions[0].id; relaySend({ type: 'requestSnapshot', sessionId: S.activeSessionId }); } }
+    renderTabs();
+  } else if (m.type === 'snapshot') {
+    if (m.sessionId === S.activeSessionId && m.data && m.data.lines) { S.lastUpdate = Date.now();
+      S.terminalLines = (m.data.lines || []).map(function(l) { return { text: l.text || '', fg: l.fg !== undefined ? l.fg : 7, bg: l.bg !== undefined ? l.bg : 0, bold: l.bold || false, italic: l.italic || false, underline: l.underline || false }; });
+      S.cursorRow = m.data.cursorRow; S.cwd = m.data.cwd || ''; renderTerm(); }
+  } else if (m.type === 'workspace') { S.workspaceFolders = m.data || []; renderPanel(); }
+  else if (m.type === 'history') { S.historyRecords = m.data || []; renderPanel(); }
 }
-function startPoll(){stopPoll();S.pollTimer=setInterval(function(){if(!S.connected)return;relaySend({type:'requestSessions'});if(S.activeSessionId)relaySend({type:'requestSnapshot',sessionId:S.activeSessionId})},2000)}
-function stopPoll(){if(S.pollTimer){clearInterval(S.pollTimer);S.pollTimer=null}}
 
-function connectHttp(cfg){
-  var base='http://'+cfg.host+':'+cfg.port;
-  function ah(){var h={};if(cfg.token)h['Authorization']='Bearer '+cfg.token;return h}
-  function g(p){return new Promise(function(ok,err){var x=new XMLHttpRequest();x.open('GET',base+p);var hd=ah();Object.keys(hd).forEach(function(k){x.setRequestHeader(k,hd[k])});x.onload=function(){if(x.status===200)ok(JSON.parse(x.responseText));else err(new Error('HTTP '+x.status))};x.onerror=function(){err(new Error('Net'))};x.send()})}
-  function po(p,b){return new Promise(function(ok,err){var x=new XMLHttpRequest();x.open('POST',base+p);x.setRequestHeader('Content-Type','application/json');var hd=ah();Object.keys(hd).forEach(function(k){x.setRequestHeader(k,hd[k])});x.onload=function(){if(x.status===200)ok(JSON.parse(x.responseText));else err(new Error('HTTP '+x.status))};x.onerror=function(){err(new Error('Net'))};x.send(JSON.stringify(b))})}
-  g('/api/sessions').then(function(ss){
-    S.connected=true;S.lastUpdate=Date.now();S.view='terminal';S.connecting=false;render();
-    g('/api/sessions/active').then(function(ac){
-      S.sessions=ss||[];renderTabs();
-      if(S.sessions.length>0){var tid=(ac&&ac.sessionId&&S.sessions.some(function(s){return s.id===ac.sessionId}))?ac.sessionId:S.sessions[0].id;switchTab(tid)}
-      S.httpGet=g;S.httpPost=po;startHttpPoll();fetchWS();fetchHist()
-    }).catch(function(){S.connected=false;render()})
-  }).catch(function(){S.connected=false;S.connecting=false;S.errorMsg='连接失败';S.view='connect';render();scheduleReconnect()})
+function startPoll() { stopPoll(); S.pollTimer = setInterval(function() { if (!S.connected) return; relaySend({ type: 'requestSessions' }); if (S.activeSessionId) relaySend({ type: 'requestSnapshot', sessionId: S.activeSessionId }); }, 2000); }
+function stopPoll() { if (S.pollTimer) { clearInterval(S.pollTimer); S.pollTimer = null; } }
+
+// ---- HTTP Mode ----
+function connectHttp(cfg) {
+  var base = 'http://' + cfg.host + ':' + cfg.port;
+  function ah() { var h = {}; if (cfg.token) h['Authorization'] = 'Bearer ' + cfg.token; return h; }
+  function g(p) { return new Promise(function(ok, err) { var x = new XMLHttpRequest(); x.open('GET', base + p); var hd = ah(); Object.keys(hd).forEach(function(k) { x.setRequestHeader(k, hd[k]); }); x.onload = function() { if (x.status === 200) ok(JSON.parse(x.responseText)); else err(new Error('HTTP ' + x.status)); }; x.onerror = function() { err(new Error('Net')); }; x.send(); }); }
+  function po(p, b) { return new Promise(function(ok, err) { var x = new XMLHttpRequest(); x.open('POST', base + p); x.setRequestHeader('Content-Type', 'application/json'); var hd = ah(); Object.keys(hd).forEach(function(k) { x.setRequestHeader(k, hd[k]); }); x.onload = function() { if (x.status === 200) ok(JSON.parse(x.responseText)); else err(new Error('HTTP ' + x.status)); }; x.onerror = function() { err(new Error('Net')); }; x.send(JSON.stringify(b)); }); }
+  g('/api/sessions').then(function(ss) {
+    S.connected = true; S.lastUpdate = Date.now(); S.view = 'terminal'; S.connecting = false; render();
+    g('/api/sessions/active').then(function(ac) {
+      S.sessions = ss || []; renderTabs();
+      if (S.sessions.length > 0) { var tid = (ac && ac.sessionId && S.sessions.some(function(s) { return s.id === ac.sessionId; })) ? ac.sessionId : S.sessions[0].id; switchTab(tid); }
+      S.httpGet = g; S.httpPost = po; startHttpPoll(); fetchWS(); fetchHist();
+    }).catch(function() { S.connected = false; render(); });
+  }).catch(function() { S.connected = false; S.connecting = false; S.errorMsg = '连接失败'; S.view = 'connect'; render(); scheduleReconnect(); });
 }
-function startHttpPoll(){stopPoll();S.pollTimer=setInterval(function(){if(!S.connected)return;fetchSnap();S.httpGet('/api/sessions').then(function(d){S.sessions=d||[];var f=S.sessions.some(function(s){return s.id===S.activeSessionId});if(!f&&S.sessions.length>0)switchTab(S.sessions[0].id);renderTabs()}).catch(function(){})},2000)}
-function fetchSnap(){if(!S.activeSessionId||!S.httpGet)return;S.httpGet('/api/sessions/'+S.activeSessionId+'/snapshot').then(function(sn){if(sn&&sn.lines){S.lastUpdate=Date.now();S.terminalLines=(sn.lines||[]).map(function(l){return{text:l.text||'',fg:l.fg!==undefined?l.fg:7,bg:l.bg!==undefined?l.bg:0,bold:l.bold||false,italic:l.italic||false,underline:l.underline||false}});S.cursorRow=sn.cursorRow;S.cwd=sn.cwd||'';renderTerm()}}).catch(function(){})}
-function fetchWS(){S.httpGet('/api/workspace').then(function(d){S.workspaceFolders=d||[];renderPanel()}).catch(function(){})}
-function fetchHist(){S.httpGet('/api/history?limit=100').then(function(d){S.historyRecords=d||[];renderPanel()}).catch(function(){})}
 
-function scheduleReconnect(){if(S.reconnectAttempts>=20)return;var d=Math.min(1000*Math.pow(1.5,S.reconnectAttempts),30000);S.reconnectAttempts++;S.reconnectTimer=setTimeout(function(){doConnect({mode:S.mode,host:S.host,port:S.port,room:S.room,token:S.token})},d)}
+function startHttpPoll() { stopPoll(); S.pollTimer = setInterval(function() { if (!S.connected) return; fetchSnap(); S.httpGet('/api/sessions').then(function(d) { S.sessions = d || []; var f = S.sessions.some(function(s) { return s.id === S.activeSessionId; }); if (!f && S.sessions.length > 0) switchTab(S.sessions[0].id); renderTabs(); }).catch(function() {}); }, 2000); }
+function fetchSnap() { if (!S.activeSessionId || !S.httpGet) return; S.httpGet('/api/sessions/' + S.activeSessionId + '/snapshot').then(function(sn) { if (sn && sn.lines) { S.lastUpdate = Date.now(); S.terminalLines = (sn.lines || []).map(function(l) { return { text: l.text || '', fg: l.fg !== undefined ? l.fg : 7, bg: l.bg !== undefined ? l.bg : 0, bold: l.bold || false, italic: l.italic || false, underline: l.underline || false }; }); S.cursorRow = sn.cursorRow; S.cwd = sn.cwd || ''; renderTerm(); } }).catch(function() {}); }
+function fetchWS() { S.httpGet('/api/workspace').then(function(d) { S.workspaceFolders = d || []; renderPanel(); }).catch(function() {}); }
+function fetchHist() { S.httpGet('/api/history?limit=100').then(function(d) { S.historyRecords = d || []; renderPanel(); }).catch(function() {}); }
 
-function switchTab(id){if(S.activeSessionId===id)return;S.activeSessionId=id;S.openPanel='';if(S.mode==='relay'){relaySend({type:'setActiveSession',sessionId:id});relaySend({type:'requestSnapshot',sessionId:id})}else{if(S.httpPost)S.httpPost('/api/sessions/active',{sessionId:id}).catch(function(){})}renderTabs()}
-function createTab(){if(S.mode==='relay')relaySend({type:'createTab',shell:'powershell'});else if(S.httpPost)S.httpPost('/api/tabs',{shell:'powershell'}).catch(function(){})}
-function sendCmd(text,se){if(!S.activeSessionId)return;if(S.mode==='relay')relaySend({type:'command',sessionId:S.activeSessionId,text:text,sendEnter:se});else if(S.httpPost)S.httpPost('/api/sessions/'+S.activeSessionId+'/commands',{text:text,sendEnter:se}).catch(function(){})}
-function sendKey(seq){if(!S.activeSessionId)return;if(S.mode==='relay')relaySend({type:'command',sessionId:S.activeSessionId,text:seq,sendEnter:false});else if(S.httpPost)S.httpPost('/api/sessions/'+S.activeSessionId+'/commands',{text:seq,sendEnter:false}).catch(function(){})}
-function togglePanel(n){S.openPanel=S.openPanel===n?'':n;render()}
-function activateWS(idx){var f=S.workspaceFolders[idx];if(S.mode==='relay')relaySend({type:'activateWorkspace',index:idx,folder:f||''});else if(S.httpPost)S.httpPost('/api/workspace/activate',{index:idx}).catch(function(){});if(f){var nd=norm(f);var m=S.sessions.find(function(s){return s.cwd&&norm(s.cwd).indexOf(nd)===0});if(m)switchTab(m.id)}S.openPanel='';render()}
-function insCmd(c){S.cmdText=c;S.openPanel='';render()}
-function disconnect(){stopPoll();if(S.reconnectTimer){clearTimeout(S.reconnectTimer);S.reconnectTimer=null}if(S.conn){try{S.conn.close()}catch(e){}S.conn=null}S.connected=false;S.sessions=[];S.terminalLines=[];S.activeSessionId='';S.view='connect';render()}
+function scheduleReconnect() { if (S.reconnectAttempts >= 20) return; var d = Math.min(1000 * Math.pow(1.5, S.reconnectAttempts), 30000); S.reconnectAttempts++; S.reconnectTimer = setTimeout(function() { doConnect({ mode: S.mode, host: S.host, port: S.port, room: S.room, token: S.token }); }, d); }
 
-function addRecent(cfg){var l=S.recentList;l=l.filter(function(r){return r.host!==cfg.host||r.port!==cfg.port});l.unshift({mode:cfg.mode,host:cfg.host,port:cfg.port,room:cfg.room||'',token:cfg.token||''});if(l.length>5)l=l.slice(0,5);S.recentList=l;sRecent(l)}
-function clearRecent(){if(confirm('确定要清除所有连接记录吗？')){S.recentList=[];sRecent([]);try{localStorage.removeItem('ccterm_conn')}catch(e){}render()}}
+// ---- Actions ----
+function switchTab(id) { if (S.activeSessionId === id) return; S.activeSessionId = id; S.openPanel = ''; if (S.mode === 'relay') { relaySend({ type: 'setActiveSession', sessionId: id }); relaySend({ type: 'requestSnapshot', sessionId: id }); } else { if (S.httpPost) S.httpPost('/api/sessions/active', { sessionId: id }).catch(function() {}); fetchSnap(); } renderTabs(); }
+function createTab() { if (S.mode === 'relay') relaySend({ type: 'createTab', shell: 'powershell' }); else if (S.httpPost) S.httpPost('/api/tabs', { shell: 'powershell' }).catch(function() {}); }
+function sendCmd(text, se) { if (!S.activeSessionId) return; if (S.mode === 'relay') relaySend({ type: 'command', sessionId: S.activeSessionId, text: text, sendEnter: se }); else if (S.httpPost) S.httpPost('/api/sessions/' + S.activeSessionId + '/commands', { text: text, sendEnter: se }).catch(function() {}); }
+function sendKey(seq) { if (!S.activeSessionId) return; if (S.mode === 'relay') relaySend({ type: 'command', sessionId: S.activeSessionId, text: seq, sendEnter: false }); else if (S.httpPost) S.httpPost('/api/sessions/' + S.activeSessionId + '/commands', { text: seq, sendEnter: false }).catch(function() {}); }
+function togglePanel(n) { S.openPanel = S.openPanel === n ? '' : n; render(); }
+function activateWS(idx) { var f = S.workspaceFolders[idx]; if (S.mode === 'relay') relaySend({ type: 'activateWorkspace', index: idx, folder: f || '' }); else if (S.httpPost) S.httpPost('/api/workspace/activate', { index: idx }).catch(function() {}); if (f) { var nd = norm(f); var m = S.sessions.find(function(s) { return s.cwd && norm(s.cwd).indexOf(nd) === 0; }); if (m) switchTab(m.id); } S.openPanel = ''; render(); }
+function insCmd(c) { S.cmdText = c; S.openPanel = ''; render(); }
+function disconnect() { stopPoll(); if (S.reconnectTimer) { clearTimeout(S.reconnectTimer); S.reconnectTimer = null; } if (S.conn) { try { S.conn.close(); } catch (e) {} S.conn = null; } S.connected = false; S.sessions = []; S.terminalLines = []; S.activeSessionId = ''; S.view = 'connect'; render(); }
 
-// Render
-function render(){
-  var a=el('app');
-  if(S.view==='connect'){
-    var l=S.recentList,re='';
-    if(l.length>0){re='<div class="card"><div class="card-title">最近连接</div>';l.forEach(function(r,i){re+='<div class="recent-item" onclick="window._useRecent('+i+')"><div><span class="recent-host">'+esc(r.host)+':'+r.port+'</span> <span class="recent-mode">'+(r.mode==='relay'?'中转':'直连')+'</span></div><span style="color:#555">→</span></div>'});re+='<div class="clear-recent" onclick="window._clearRecent()">清除记录</div></div>'}
-    a.innerHTML='<div class="page"><div class="conn-page">'+
-      '<div class="header"><div class="logo-dots"><div class="ld lr"></div><div class="ld ly"></div><div class="ld lg"></div></div><div class="title">CCTerm</div><div class="subtitle">远程终端控制</div></div>'+
-      '<div class="scan-hint">📷 点击右下角按钮扫描二维码</div>'+
-      '<div class="card">'+
-        '<div class="card-title">连接终端</div>'+
-        '<div class="divider"><div class="line"></div><span class="divider-text">手动输入</span><div class="line"></div></div>'+
-        '<div class="mode-tabs"><div class="mode-tab'+(S.mode==='relay'?' active':'')+'" onclick="window._setMode(\'relay\')">中转模式</div><div class="mode-tab'+(S.mode==='http'?' active':'')+'" onclick="window._setMode(\'http\')">直连模式</div></div>'+
-        '<div class="form-group"><span class="label">服务器地址</span><input class="input" id="inp_host" placeholder="192.168.1.100" value="'+esc(S.host)+'"></div>'+
-        '<div class="input-row"><div class="form-group flex-1"><span class="label">端口</span><input class="input" id="inp_port" type="number" placeholder="3001" value="'+esc(S.port)+'"></div>'+(S.mode==='relay'?'<div class="form-group flex-2"><span class="label">房间号</span><input class="input" id="inp_room" placeholder="room-id" value="'+esc(S.room)+'"></div>':'')+'</div>'+
-        '<div class="form-group"><span class="label">Token（可选）</span><input class="input" id="inp_token" placeholder="认证令牌" value="'+esc(S.token)+'"></div>'+
-        (S.errorMsg?'<div class="error-msg">'+esc(S.errorMsg)+'</div>':'')+
-        '<div class="conn-btn" onclick="window._handleConnect()">'+(S.connecting?'连接中...':'连接')+'</div>'+
-      '</div>'+re+'</div></div>';
-  }else{
-    var th='';S.sessions.forEach(function(s){th+='<div class="tab-btn'+(s.id===S.activeSessionId?' active':'')+'" onclick="window._switchTab(\''+s.id+'\')">'+esc(s.tabTitle||s.id)+'</div>'});
-    var ph='';
-    if(S.openPanel==='workspace'){ph='<div class="panel">';if(S.workspaceFolders.length===0)ph+='<div class="panel-empty">没有工作区文件夹</div>';else S.workspaceFolders.forEach(function(f,i){ph+='<div class="panel-item" onclick="window._activateWS('+i+')">📁 '+esc(f)+'</div>'});ph+='</div>'}
-    else if(S.openPanel==='history'){ph='<div class="panel">';if(S.historyRecords.length===0)ph+='<div class="panel-empty">没有历史记录</div>';else S.historyRecords.forEach(function(r){ph+='<div class="panel-item" onclick="window._insCmd(\''+esc(r.command).replace(/'/g,"\\'")+'\')"><span class="hist-cmd">'+esc(r.command)+'</span><span class="hist-meta">'+esc(r.directory||'')+'</span></div>'});ph+='</div>'}
-    var tl='';if(S.terminalLines.length===0)tl='<div class="term-empty">等待终端连接...</div>';else S.terminalLines.forEach(function(l,i){tl+='<div class="term-line'+(i===S.cursorRow?' cursor':'')+'" style="'+aStyle(l)+'">'+esc(l.text||'')+'</div>'});
-    a.innerHTML='<div class="page">'+
-      '<div class="top-bar"><button class="btn btn-back" onclick="window._disconnect()">← 返回</button><div class="status"><div class="dot '+(S.connected?'green':'red')+'"></div><span>'+(S.connected?'已连接':'未连接')+'</span></div><button class="btn btn-off" onclick="window._disconnect()">断开</button></div>'+
-      '<div class="tab-bar"><div class="tab-scroll">'+th+'</div><div class="tab-add" onclick="window._createTab()">+</div></div>'+
-      '<div class="toolbar"><div class="tool-btn'+(S.openPanel==='workspace'?' active':'')+'" onclick="window._togglePanel(\'workspace\')">WORKSPACE</div><div class="tool-btn'+(S.openPanel==='history'?' active':'')+'" onclick="window._togglePanel(\'history\')">HISTORY</div></div>'+
-      ph+(S.cwd?'<div class="cwd-bar">'+esc(S.cwd)+'</div>':'')+'<div class="terminal" id="term">'+tl+'</div>'+
-      '<div class="key-row">'+kb('Home','\x1b[H')+kb('End','\x1b[F')+kb('↑','\x1b[A')+kb('↓','\x1b[B')+kb('←','\x1b[D')+kb('→','\x1b[C')+kb('⌫','\x7f')+kb('Del','\x1b[3~')+kb('Tab','\x1b[Z]','wide')+kb('C-c','\x03')+kb('C-d','\x04')+'</div>'+
-      '<div class="input-bar"><input class="cmd-input" id="cmdInput" placeholder="输入命令..." value="'+esc(S.cmdText)+'" onkeydown="window._onKey(event)"><button class="send-btn" onclick="window._onSend()">发送</button><button class="enter-btn" onclick="window._onEnter()">回车</button></div>'+
-    '</div>';
-    setTimeout(function(){var t=el('term');if(t&&S.autoScroll)t.scrollTop=t.scrollHeight},50);
+function addRecent(cfg) {
+  var l = S.recentList;
+  l = l.filter(function(r) { return r.host !== cfg.host || r.port !== cfg.port; });
+  l.unshift({ mode: cfg.mode, host: cfg.host, port: cfg.port, room: cfg.room || '', token: cfg.token || '' });
+  if (l.length > 5) l = l.slice(0, 5);
+  S.recentList = l; sRecent(l);
+}
+
+function clearRecent() { if (confirm('确定要清除所有连接记录吗？')) { S.recentList = []; sRecent([]); try { localStorage.removeItem('ccterm_conn'); } catch (e) {} render(); } }
+
+// ---- Render: Connect page ----
+function renderConn() {
+  var l = S.recentList, re = '';
+  if (l.length > 0) {
+    re = '<div class="card"><div class="card-title">最近连接</div>';
+    l.forEach(function(r, i) { re += '<div class="recent-item" onclick="window._useRecent(' + i + ')"><div class="recent-info"><span class="recent-host">' + esc(r.host) + ':' + r.port + '</span><span class="recent-mode">' + (r.mode === 'relay' ? '中转' : '直连') + '</span></div><span class="recent-arrow">→</span></div>'; });
+    re += '<div class="clear-recent" onclick="window._clearRecent()">清除记录</div></div>';
   }
+  var a = el('app');
+  a.innerHTML = '<div class="page">' +
+    '<div class="status-bar" style="height:var(--status-bar-height);background:#0f0f0f"></div>' +
+    '<div class="header"><div class="logo-row"><div class="logo-dots"><div class="ld red"></div><div class="ld yellow"></div><div class="ld green"></div></div><span class="title">CCTerm</span></div><span class="subtitle">远程终端控制</span></div>' +
+    '<div class="conn-page">' +
+      '<div class="card">' +
+        '<div class="card-title">连接终端</div>' +
+        '<div class="scan-hint" onclick="window._hintScan()"><span>📷</span><span>扫描二维码连接</span></div>' +
+        '<div class="divider"><div class="line"></div><span class="divider-text">或手动输入</span><div class="line"></div></div>' +
+        '<div class="mode-tabs"><div class="mode-tab' + (S.mode === 'relay' ? ' active' : '') + '" onclick="window._setMode(\'relay\')">中转模式</div><div class="mode-tab' + (S.mode === 'http' ? ' active' : '') + '" onclick="window._setMode(\'http\')">直连模式</div></div>' +
+        '<div class="form">' +
+          '<div class="form-group"><span class="label">服务器地址</span><input class="input" id="inp_host" placeholder="192.168.1.100" value="' + esc(S.host) + '"></div>' +
+          '<div class="input-row">' +
+            '<div class="form-group flex-1"><span class="label">端口</span><input class="input" id="inp_port" type="number" placeholder="3001" value="' + esc(S.port) + '"></div>' +
+            (S.mode === 'relay' ? '<div class="form-group flex-2"><span class="label">房间号</span><input class="input" id="inp_room" placeholder="room-id" value="' + esc(S.room) + '"></div>' : '') +
+          '</div>' +
+          '<div class="form-group"><span class="label">Token（可选）</span><input class="input" id="inp_token" placeholder="认证令牌" value="' + esc(S.token) + '"></div>' +
+        '</div>' +
+        (S.errorMsg ? '<div class="error-msg">' + esc(S.errorMsg) + '</div>' : '') +
+        '<div class="conn-btn" onclick="window._handleConnect()">' + (S.connecting ? '连接中...' : '连接') + '</div>' +
+      '</div>' +
+      re +
+    '</div>' +
+    '<div class="footer"><span class="footer-text">确保手机与电脑在同一局域网</span><span class="footer-text">或通过中转服务器连接</span></div>' +
+  '</div>';
 }
-function kb(lb,seq,cls){return'<button class="key-btn'+(cls?' '+cls:'')+'" onclick="window._sendKey(\''+seq+'\')">'+lb+'</button>'}
-function renderTabs(){var b=document.querySelector('.tab-scroll');if(b)b.innerHTML=S.sessions.map(function(s){return'<div class="tab-btn'+(s.id===S.activeSessionId?' active':'')+'" onclick="window._switchTab(\''+s.id+'\')">'+esc(s.tabTitle||s.id)+'</div>'}).join('')}
-function renderTerm(){var t=el('term');if(!t)return;if(S.terminalLines.length===0)t.innerHTML='<div class="term-empty">等待终端连接...</div>';else t.innerHTML=S.terminalLines.map(function(l,i){return'<div class="term-line'+(i===S.cursorRow?' cursor':'')+'" style="'+aStyle(l)+'">'+esc(l.text||'')+'</div>'}).join('');if(S.autoScroll)t.scrollTop=t.scrollHeight;var c=document.querySelector('.cwd-bar');if(c)c.innerHTML=S.cwd?esc(S.cwd):''}
-function renderStatus(){var d=document.querySelector('.dot');var t=document.querySelector('.status span');if(d)d.className='dot '+(S.connected?'green':'red');if(t)t.textContent=S.connected?'已连接':'未连接'}
-function renderPanel(){var p=document.querySelector('.panel');if(!p)return;if(S.openPanel==='workspace'){if(S.workspaceFolders.length===0)p.innerHTML='<div class="panel-empty">没有工作区文件夹</div>';else p.innerHTML=S.workspaceFolders.map(function(f,i){return'<div class="panel-item" onclick="window._activateWS('+i+')">📁 '+esc(f)+'</div>'}).join('')}else if(S.openPanel==='history'){if(S.historyRecords.length===0)p.innerHTML='<div class="panel-empty">没有历史记录</div>';else p.innerHTML=S.historyRecords.map(function(r){return'<div class="panel-item" onclick="window._insCmd(\''+esc(r.command).replace(/'/g,"\\'")+'\')"><span class="hist-cmd">'+esc(r.command)+'</span><span class="hist-meta">'+esc(r.directory||'')+'</span></div>'}).join('')}}
 
-// Global handlers (onclick needs window.*)
-window._setMode=function(m){S.mode=m;render()};
-window._handleConnect=function(){var h=el('inp_host');var p=el('inp_port');var r=el('inp_room');var t=el('inp_token');var hv=(h&&h.value||'').trim();var pv=(p&&p.value||'').trim();var rv=(r&&r.value||'').trim();var tv=(t&&t.value||'').trim();if(!hv){S.errorMsg='请输入服务器地址';render();return}var pn=parseInt(pv)||0;if(pn<=0||pn>65535)pn=S.mode==='relay'?8080:3001;doConnect({mode:S.mode,host:hv,port:pn,room:S.mode==='relay'?rv:'',token:tv})};
-window._useRecent=function(i){var r=S.recentList[i];if(r)doConnect(r)};
-window._clearRecent=function(){clearRecent()};
-window._switchTab=function(id){switchTab(id)};
-window._createTab=function(){createTab()};
-window._togglePanel=function(n){togglePanel(n)};
-window._activateWS=function(i){activateWS(i)};
-window._insCmd=function(c){insCmd(c)};
-window._sendKey=function(s){sendKey(s)};
-window._disconnect=function(){disconnect()};
-window._onSend=function(){var i=el('cmdInput');S.cmdText=i?i.value:'';if(!S.cmdText)return;sendCmd(S.cmdText,false);S.inputHistory.push(S.cmdText);S.historyIdx=S.inputHistory.length;S.cmdText='';render()};
-window._onEnter=function(){var i=el('cmdInput');S.cmdText=i?i.value:'';if(!S.cmdText)return;sendCmd(S.cmdText,true);S.inputHistory.push(S.cmdText);S.historyIdx=S.inputHistory.length;S.cmdText='';render()};
-window._onKey=function(e){if(e.key==='Enter'){e.preventDefault();window._onEnter()}else if(e.key==='ArrowUp'){e.preventDefault();if(S.historyIdx>0){S.historyIdx--;S.cmdText=S.inputHistory[S.historyIdx]||'';render()}}else if(e.key==='ArrowDown'){e.preventDefault();if(S.historyIdx<S.inputHistory.length-1){S.historyIdx++;S.cmdText=S.inputHistory[S.historyIdx]||''}else{S.historyIdx=S.inputHistory.length;S.cmdText=''}render()}};
-
-// Init - check for QR parameter in URL
-function init(){
-  S.recentList=lRecent();
-  var qp='';
-  try{
-    // Parse URL query parameter ?qr=...
-    var us=location.search||'';
-    if(us.indexOf('qr=')>=0){
-      var m=us.match(/[?&]qr=([^&]*)/);
-      if(m)qp=decodeURIComponent(m[1]);
-    }
-  }catch(e){}
-  if(qp){
-    var cfg=parseQR(qp);
-    if(cfg){doConnect(cfg);return}
+// ---- Render: Terminal page ----
+function renderTermPage() {
+  var th = ''; S.sessions.forEach(function(s) { var t = s.tabTitle || s.id; if (t.length > 20) t = t.substring(0, 18) + '...'; th += '<div class="tab-btn' + (s.id === S.activeSessionId ? ' active' : '') + '" onclick="window._switchTab(\'' + s.id + '\')">' + esc(t) + '</div>'; });
+  var ph = '';
+  if (S.openPanel === 'workspace') {
+    ph = '<div class="panel">';
+    if (S.workspaceFolders.length === 0) ph += '<div class="panel-empty">没有工作区文件夹</div>';
+    else S.workspaceFolders.forEach(function(f, i) { ph += '<div class="panel-item" onclick="window._activateWS(' + i + ')">📁 ' + esc(f) + '</div>'; });
+    ph += '</div>';
+  } else if (S.openPanel === 'history') {
+    ph = '<div class="panel">';
+    if (S.historyRecords.length === 0) ph += '<div class="panel-empty">没有历史记录</div>';
+    else S.historyRecords.forEach(function(r) { ph += '<div class="panel-item" onclick="window._insCmd(\'' + esc(r.command).replace(/'/g, "\\'") + '\')"><span class="hist-cmd">' + esc(r.command) + '</span><span class="hist-meta">' + esc(r.directory || '') + '</span></div>'; });
+    ph += '</div>';
   }
-  var saved=lConn();
-  if(saved){S.mode=saved.mode||'relay';S.host=saved.host||'';S.port=String(saved.port||'');S.room=saved.room||'';S.token=saved.token||'';render();setTimeout(function(){doConnect(saved)},500)}
+  var tl = '';
+  if (S.terminalLines.length === 0) tl = '<div class="term-empty">等待终端连接...</div>';
+  else S.terminalLines.forEach(function(l, i) { tl += '<div class="term-line' + (i === S.cursorRow ? ' cursor' : '') + '" style="' + aStyle(l) + '">' + esc(l.text || '') + '</div>'; });
+  var a = el('app');
+  a.innerHTML = '<div class="page">' +
+    '<div class="top-bar">' +
+      '<button class="btn btn-back" onclick="window._disconnect()">← 返回</button>' +
+      '<div class="status"><div class="status-dot ' + (S.connected ? 'green' : 'red') + '"></div><span class="status-text">' + (S.connected ? '已连接' : '未连接') + '</span></div>' +
+      '<button class="btn btn-disconnect" onclick="window._disconnect()">断开</button>' +
+    '</div>' +
+    '<div class="tab-bar"><div class="tab-scroll">' + th + '</div><div class="tab-add" onclick="window._createTab()">+</div></div>' +
+    '<div class="toolbar">' +
+      '<div class="tool-btn' + (S.openPanel === 'workspace' ? ' active' : '') + '" onclick="window._togglePanel(\'workspace\')">WORKSPACE</div>' +
+      '<div class="tool-btn' + (S.openPanel === 'history' ? ' active' : '') + '" onclick="window._togglePanel(\'history\')">HISTORY</div>' +
+    '</div>' +
+    ph +
+    (S.cwd ? '<div class="cwd-bar">' + esc(S.cwd) + '</div>' : '') +
+    '<div class="terminal" id="term">' + tl + '</div>' +
+    '<div class="key-row">' +
+      kb('Home', '\x1b[H') + kb('End', '\x1b[F') + kb('↑', '\x1b[A') + kb('↓', '\x1b[B') + kb('←', '\x1b[D') + kb('→', '\x1b[C') +
+      kb('⌫', '\x7f') + kb('Del', '\x1b[3~') + kb('Tab', '\x1b[Z]', 'wide') + kb('C-c', '\x03') + kb('C-d', '\x04') +
+    '</div>' +
+    '<div class="input-bar">' +
+      '<input class="cmd-input" id="cmdInput" placeholder="输入命令..." value="' + esc(S.cmdText) + '" onkeydown="window._onKey(event)">' +
+      '<button class="send-btn" onclick="window._onSend()">发送</button>' +
+      '<button class="enter-btn" onclick="window._onEnter()">回车</button>' +
+    '</div>' +
+  '</div>';
+  setTimeout(function() { var t = el('term'); if (t && S.autoScroll) t.scrollTop = t.scrollHeight; }, 50);
+}
+
+function kb(lb, seq, cls) { return '<button class="key-btn' + (cls ? ' ' + cls : '') + '" onclick="window._sendKey(\'' + seq + '\')">' + lb + '</button>'; }
+
+function render() { if (S.view === 'connect') renderConn(); else renderTermPage(); }
+function renderTabs() { var b = document.querySelector('.tab-scroll'); if (b) { var h = ''; S.sessions.forEach(function(s) { var t = s.tabTitle || s.id; if (t.length > 20) t = t.substring(0, 18) + '...'; h += '<div class="tab-btn' + (s.id === S.activeSessionId ? ' active' : '') + '" onclick="window._switchTab(\'' + s.id + '\')">' + esc(t) + '</div>'; }); b.innerHTML = h; } }
+function renderTerm() { var t = el('term'); if (!t) return; if (S.terminalLines.length === 0) t.innerHTML = '<div class="term-empty">等待终端连接...</div>'; else { var h = ''; S.terminalLines.forEach(function(l, i) { h += '<div class="term-line' + (i === S.cursorRow ? ' cursor' : '') + '" style="' + aStyle(l) + '">' + esc(l.text || '') + '</div>'; }); t.innerHTML = h; } if (S.autoScroll) t.scrollTop = t.scrollHeight; var c = document.querySelector('.cwd-bar'); if (c) c.innerHTML = S.cwd ? esc(S.cwd) : ''; }
+function renderStatus() { var d = document.querySelector('.status-dot'); var t = document.querySelector('.status-text'); if (d) d.className = 'status-dot ' + (S.connected ? 'green' : 'red'); if (t) t.textContent = S.connected ? '已连接' : '未连接'; }
+function renderPanel() { var p = document.querySelector('.panel'); if (!p) return;
+  if (S.openPanel === 'workspace') { if (S.workspaceFolders.length === 0) p.innerHTML = '<div class="panel-empty">没有工作区文件夹</div>'; else { var h = ''; S.workspaceFolders.forEach(function(f, i) { h += '<div class="panel-item" onclick="window._activateWS(' + i + ')">📁 ' + esc(f) + '</div>'; }); p.innerHTML = h; } }
+  else if (S.openPanel === 'history') { if (S.historyRecords.length === 0) p.innerHTML = '<div class="panel-empty">没有历史记录</div>'; else { var h2 = ''; S.historyRecords.forEach(function(r) { h2 += '<div class="panel-item" onclick="window._insCmd(\'' + esc(r.command).replace(/'/g, "\\'") + '\')"><span class="hist-cmd">' + esc(r.command) + '</span><span class="hist-meta">' + esc(r.directory || '') + '</span></div>'; }); p.innerHTML = h2; } }
+}
+
+// ---- Window handlers ----
+window._hintScan = function() { /* QR scan is done via native floating button */ };
+window._setMode = function(m) { S.mode = m; render(); };
+window._handleConnect = function() {
+  var hv = (el('inp_host') && el('inp_host').value || '').trim();
+  var pv = (el('inp_port') && el('inp_port').value || '').trim();
+  var rv = (el('inp_room') && el('inp_room').value || '').trim();
+  var tv = (el('inp_token') && el('inp_token').value || '').trim();
+  if (!hv) { S.errorMsg = '请输入服务器地址'; render(); return; }
+  var pn = parseInt(pv) || 0; if (pn <= 0 || pn > 65535) pn = S.mode === 'relay' ? 8080 : 3001;
+  doConnect({ mode: S.mode, host: hv, port: pn, room: S.mode === 'relay' ? rv : '', token: tv });
+};
+window._useRecent = function(i) { var r = S.recentList[i]; if (r) doConnect(r); };
+window._clearRecent = function() { clearRecent(); };
+window._switchTab = function(id) { switchTab(id); };
+window._createTab = function() { createTab(); };
+window._togglePanel = function(n) { togglePanel(n); };
+window._activateWS = function(i) { activateWS(i); };
+window._insCmd = function(c) { insCmd(c); };
+window._sendKey = function(s) { sendKey(s); };
+window._disconnect = function() { disconnect(); };
+window._onSend = function() { var i = el('cmdInput'); var t = i ? i.value : ''; if (!t) return; S.cmdText = t; sendCmd(t, false); S.inputHistory.push(t); S.historyIdx = S.inputHistory.length; S.cmdText = ''; renderTermPage(); };
+window._onEnter = function() { var i = el('cmdInput'); var t = i ? i.value : ''; if (!t) return; S.cmdText = t; sendCmd(t, true); S.inputHistory.push(t); S.historyIdx = S.inputHistory.length; S.cmdText = ''; renderTermPage(); };
+window._onKey = function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); window._onEnter(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); if (S.historyIdx > 0) { S.historyIdx--; S.cmdText = S.inputHistory[S.historyIdx] || ''; renderTermPage(); } }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); if (S.historyIdx < S.inputHistory.length - 1) { S.historyIdx++; S.cmdText = S.inputHistory[S.historyIdx] || ''; } else { S.historyIdx = S.inputHistory.length; S.cmdText = ''; } renderTermPage(); }
+};
+
+// ---- Init ----
+function init() {
+  S.recentList = lRecent();
+  var qp = '';
+  try { var us = location.search || ''; var m = us.match(/[?&]qr=([^&]*)/); if (m) qp = decodeURIComponent(m[1]); } catch (e) {}
+  if (qp) { var cfg = parseQR(qp); if (cfg) { S.mode = cfg.mode; S.host = cfg.host; S.port = cfg.port; S.room = cfg.room; S.token = cfg.token; render(); doConnect(cfg); return; } }
+  var saved = lConn();
+  if (saved) { S.mode = saved.mode || 'relay'; S.host = saved.host || ''; S.port = String(saved.port || ''); S.room = saved.room || ''; S.token = saved.token || ''; render(); setTimeout(function() { doConnect(saved); }, 500); }
   else render();
 }
 init();
