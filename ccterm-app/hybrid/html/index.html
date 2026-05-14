@@ -1,456 +1,505 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<script type="text/javascript" src="uni.webview.1.5.5.js"></script>
-<title>CCTerm Remote</title>
-<style>
-* { margin:0; padding:0; box-sizing:border-box; }
-html, body { width:100%; height:100%; height:100dvh; overflow:hidden; background:#0c0c0c; }
-body {
-  display:flex; flex-direction:column; font-family:monospace;
-  -webkit-tap-highlight-color:transparent;
-  -webkit-user-select:none; user-select:none;
-  position:relative; color:#ccc;
-}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <script type="text/javascript" src="uni.webview.1.5.5.js"></script>
+  <title>CCTerm Remote</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html, body { width:100%; height:100%; height:100dvh; overflow:hidden; background:#0c0c0c; }
+    body {
+      display:flex; flex-direction:column; font-family:monospace;
+      -webkit-tap-highlight-color:transparent;
+      -webkit-user-select:none; user-select:none;
+      position:relative; color:#ccc;
+    }
 
-/* -- Setup overlay -- */
-.setup-overlay {
-  position:fixed; top:0;left:0;right:0;bottom:0; z-index:100;
-  display:flex; align-items:center; justify-content:center;
-  background:#0c0c0c;
-}
-.setup-box { text-align:center; color:#ccc; padding:24px; }
-.setup-box .logo-row { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:12px; }
-.setup-box .logo-dots { display:flex; gap:5px; }
-.setup-box .logo-dots .ld { width:10px; height:10px; border-radius:50%; }
-.setup-box .logo-dots .ld.red { background:#e74856; }
-.setup-box .logo-dots .ld.yellow { background:#f9a825; }
-.setup-box .logo-dots .ld.green { background:#16c60c; }
-.setup-box h2 { margin-bottom:4px; font-size:22px; color:#fff; }
-.setup-box .sub { font-size:12px; color:#888; margin-bottom:20px; }
-.setup-box .hint { font-size:13px; color:#fff; margin-bottom:12px; padding:12px 16px; background:#0078d4; border-radius:6px; cursor:pointer; }
-.setup-box input {
-  padding:10px 14px; font-size:14px; background:#1a1a1a; border:1px solid #454545;
-  border-radius:6px; color:#fff; width:260px; text-align:center; outline:none;
-}
-.setup-box input:focus { border-color:#0078d4; }
-.setup-box .mode-row { display:flex; gap:6px; width:260px; margin:8px auto; }
-.setup-box .mode-row button { flex:1; padding:6px; font-size:12px; background:#252525; border:1px solid #3a3a3a; border-radius:4px; color:#888; cursor:pointer; }
-.setup-box .mode-row button.active { color:#0078d4; border-color:#0078d4; background:#1a2a3a; }
-.setup-box .btn-connect {
-  margin-top:6px; padding:10px 28px; font-size:14px; background:#0078d4;
-  border:none; border-radius:6px; color:#fff; cursor:pointer;
-}
-.setup-box .error { color:#e74856; margin-top:8px; font-size:12px; }
-.setup-box .recent { margin-top:16px; text-align:left; width:260px; }
-.setup-box .recent-title { font-size:12px; color:#888; margin-bottom:6px; }
-.setup-box .recent-item { padding:8px 0; border-bottom:1px solid #222; cursor:pointer; font-size:12px; display:flex; justify-content:space-between; }
-.setup-box .recent-item:active { opacity:0.7; }
-.setup-box .recent-item .rhost { color:#ccc; font-family:monospace; }
-.setup-box .recent-item .rmode { font-size:10px; color:#888; background:#252525; padding:1px 5px; border-radius:3px; }
-.setup-box .recent-clear { text-align:center; padding:8px 0; font-size:11px; color:#666; cursor:pointer; }
-.setup-box .ftp { margin-top:16px; font-size:11px; color:#555; }
+    /* -- Setup page -- */
+    .setup-page {
+      width:100%; height:100%; overflow-y:auto;
+      display:flex; align-items:center; justify-content:center;
+      background:#0c0c0c;
+    }
+    /* -- Terminal page -- */
+    .term-page {
+      display:flex; flex-direction:column; height:100%;
+    }
+    .setup-box { text-align:center; color:#ccc; padding:24px; max-width:320px; width:100%; }
+    .setup-box .logo-row { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:12px; }
+    .setup-box .logo-dots { display:flex; gap:5px; }
+    .setup-box .logo-dots .ld { width:10px; height:10px; border-radius:50%; }
+    .setup-box .logo-dots .ld.red { background:#e74856; }
+    .setup-box .logo-dots .ld.yellow { background:#f9a825; }
+    .setup-box .logo-dots .ld.green { background:#16c60c; }
+    .setup-box h2 { margin-bottom:4px; font-size:22px; color:#fff; }
+    .setup-box .sub { font-size:12px; color:#888; margin-bottom:16px; }
+    .setup-box .scan-btn {
+      display:block; width:100%; padding:14px; font-size:15px; font-weight:600;
+      background:#0078d4; border:none; border-radius:8px; color:#fff; cursor:pointer;
+      margin-bottom:14px;
+    }
+    .setup-box .divider { display:flex; align-items:center; margin:14px 0; gap:10px; }
+    .setup-box .divider .line { flex:1; height:1px; background:#333; }
+    .setup-box .divider span { font-size:11px; color:#666; }
+    .setup-box .mode-row { display:flex; gap:6px; margin-bottom:10px; }
+    .setup-box .mode-row button { flex:1; padding:6px; font-size:12px; background:#252525; border:1px solid #3a3a3a; border-radius:4px; color:#888; cursor:pointer; }
+    .setup-box .mode-row button.active { color:#0078d4; border-color:#0078d4; background:#1a2a3a; }
+    .setup-box input {
+      display:block; width:100%; padding:10px 14px; margin-top:8px;
+      font-size:14px; background:#1a1a1a; border:1px solid #454545;
+      border-radius:6px; color:#fff; outline:none; text-align:left;
+    }
+    .setup-box input:focus { border-color:#0078d4; }
+    .setup-box .port-row { display:flex; gap:8px; margin-top:8px; }
+    .setup-box .port-row input { margin-top:0; }
+    .setup-box .port-row .port { flex:1; }
+    .setup-box .port-row .room { flex:2; }
+    .setup-box .btn-connect {
+      display:block; width:100%; margin-top:10px; padding:12px 28px; font-size:14px;
+      background:#0078d4; border:none; border-radius:6px; color:#fff; cursor:pointer;
+    }
+    .setup-box .btn-connect:active { background:#1a8ad4; }
+    .setup-box .error { color:#e74856; margin-top:8px; font-size:12px; }
+    .setup-box .recent { margin-top:18px; text-align:left; }
+    .setup-box .recent-title { font-size:12px; color:#888; margin-bottom:6px; }
+    .setup-box .recent-item { padding:10px 0; border-bottom:1px solid #222; cursor:pointer; font-size:12px; display:flex; justify-content:space-between; }
+    .setup-box .recent-item:active { opacity:0.7; }
+    .setup-box .recent-item .rhost { color:#ccc; font-family:monospace; }
+    .setup-box .recent-item .rmode { font-size:10px; color:#888; background:#252525; padding:1px 5px; border-radius:3px; }
+    .setup-box .recent-clear { text-align:center; padding:8px 0; font-size:11px; color:#666; cursor:pointer; }
+    .setup-box .footer { margin-top:16px; font-size:11px; color:#555; }
 
-/* -- Header (tab bar) -- */
-.header {
-  display:flex; align-items:center; gap:6px; padding:6px 8px;
-  background:#1f1f1f; border-bottom:1px solid #333; flex-shrink:0;
-  overflow-x:auto; min-height:36px;
-}
-.header .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-.header .dot.green { background:#16c60c; }
-.header .dot.yellow { background:#f9a825; }
-.header .dot.red { background:#e74856; }
-.tab-btn {
-  padding:3px 10px; font-size:12px; color:#888; background:transparent;
-  border:1px solid transparent; border-radius:4px; cursor:pointer;
-  white-space:nowrap; flex-shrink:0;
-}
-.tab-btn.active { color:#0078d4; border-color:#0078d4; }
-.tab-add {
-  padding:2px 8px; font-size:16px; color:#888; background:transparent;
-  border:1px solid transparent; border-radius:4px; cursor:pointer;
-  flex-shrink:0; line-height:1;
-}
-.tab-add:active { color:#fff; background:#2d2d2d; }
+    .header {
+      display:flex; align-items:center; gap:6px; padding:6px 8px;
+      background:#1f1f1f; border-bottom:1px solid #333; flex-shrink:0;
+      overflow-x:auto; min-height:36px;
+    }
+    .header .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .header .dot.green { background:#16c60c; }
+    .header .dot.yellow { background:#f9a825; }
+    .header .dot.red { background:#e74856; }
+    .tab-btn {
+      padding:3px 10px; font-size:12px; color:#888; background:transparent;
+      border:1px solid transparent; border-radius:4px; cursor:pointer;
+      white-space:nowrap; flex-shrink:0;
+    }
+    .tab-btn.active { color:#0078d4; border-color:#0078d4; }
+    .tab-add {
+      padding:2px 8px; font-size:16px; color:#888; background:transparent;
+      border:1px solid transparent; border-radius:4px; cursor:pointer;
+      flex-shrink:0; line-height:1;
+    }
+    .tab-add:active { color:#fff; background:#2d2d2d; }
 
-/* -- Toolbar -- */
-.toolbar {
-  display:flex; gap:4px; padding:4px 8px; flex-shrink:0;
-  background:#1a1a1a; border-bottom:1px solid #2a2a2a;
-}
-.toolbar button {
-  flex:1; padding:5px 0; font-size:11px; font-weight:600;
-  letter-spacing:0.5px; background:#252525; border:1px solid #3a3a3a;
-  border-radius:4px; color:#888; cursor:pointer;
-}
-.toolbar button.active { background:#0078d4; border-color:#0078d4; color:#fff; }
+    .toolbar {
+      display:flex; gap:4px; padding:4px 8px; flex-shrink:0;
+      background:#1a1a1a; border-bottom:1px solid #2a2a2a;
+    }
+    .toolbar button {
+      flex:1; padding:5px 0; font-size:11px; font-weight:600;
+      letter-spacing:0.5px; background:#252525; border:1px solid #3a3a3a;
+      border-radius:4px; color:#888; cursor:pointer;
+    }
+    .toolbar button.active { background:#0078d4; border-color:#0078d4; color:#fff; }
 
-/* -- Panel (absolute overlay) -- */
-.panel {
-  display:none; position:absolute; left:0; right:0; z-index:50;
-  max-height:40vh; overflow-y:auto;
-  background:#141414; border-bottom:1px solid #2a2a2a;
-  -webkit-overflow-scrolling:touch;
-}
-.panel.open { display:block; }
-.panel-item {
-  padding:8px 12px; font-size:12px; color:#aaa; border-bottom:1px solid #222;
-  cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-.panel-item:active { background:#0078d4; color:#fff; }
-.panel-item .muted { color:#666; font-size:10px; }
-.panel-empty { padding:16px; text-align:center; color:#555; font-size:12px; }
+    .panel {
+      display:none; max-height:40vh; overflow-y:auto; flex-shrink:0;
+      background:#141414; border-bottom:1px solid #2a2a2a;
+      -webkit-overflow-scrolling:touch;
+    }
+    .panel.open { display:block; }
+    .panel-item {
+      padding:8px 12px; font-size:12px; color:#aaa; border-bottom:1px solid #222;
+      cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .panel-item:active { background:#0078d4; color:#fff; }
+    .panel-item .muted { color:#666; font-size:10px; }
+    .panel-empty { padding:16px; text-align:center; color:#555; font-size:12px; }
+    .panel-dir { color:#569cd6; }
 
-/* -- CWD bar -- */
-.cwd-bar {
-  padding:3px 8px; font-size:11px; color:#569cd6;
-  border-bottom:1px solid #2a2a2a; white-space:nowrap; overflow:hidden;
-  text-overflow:ellipsis; background:#0f0f0f;
-}
+    .terminal {
+      flex:1 1 0; min-height:0; overflow-y:auto; padding:4px 8px;
+      font-family:'Cascadia Code','Consolas','Courier New',monospace;
+      font-size:13px; line-height:1.4; color:#ccc;
+      -webkit-overflow-scrolling:touch;
+      display:flex; flex-direction:column;
+    }
+    .terminal .line { white-space:pre; min-height:1.4em; word-break:break-all; }
+    .terminal .line.cursor::after {
+      content:''; display:inline-block; width:0.5em; height:1em;
+      background:#ccc; vertical-align:text-bottom; animation:blink 1s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity:0; } }
 
-/* -- Terminal -- */
-.terminal {
-  flex:1 1 0; min-height:0; overflow-y:auto; padding:4px 8px;
-  font-family:'Cascadia Code','Consolas','Courier New',monospace;
-  font-size:13px; line-height:1.4; color:#ccc;
-  -webkit-overflow-scrolling:touch;
-  display:flex; flex-direction:column;
-}
-.terminal .line { white-space:pre; min-height:1.4em; word-break:break-all; }
-.terminal .line.cursor::after {
-  content:''; display:inline-block; width:0.5em; height:1em;
-  background:#ccc; vertical-align:text-bottom; animation:blink 1s step-end infinite;
-}
-@keyframes blink { 50% { opacity:0; } }
-.terminal .empty { display:flex; align-items:center; justify-content:center; flex:1; color:#666; font-size:14px; }
+    .input-area {
+      display:flex; gap:4px; padding:6px 8px;
+      background:#1f1f1f; border-top:1px solid #333; flex-shrink:0;
+    }
+    .input-area input {
+      flex:1; padding:8px 10px; font-size:14px; font-family:'Cascadia Code','Consolas',monospace;
+      background:#0c0c0c; border:1px solid #454545; border-radius:4px; color:#fff;
+      outline:none; min-width:0;
+    }
+    .input-area input:focus { border-color:#0078d4; }
+    .input-area button {
+      padding:8px 10px; font-size:13px; background:#333; border:1px solid #454545;
+      border-radius:4px; color:#ccc; cursor:pointer; white-space:nowrap;
+      flex-shrink:0;
+    }
+    .input-area button:active { background:#0078d4; color:#fff; }
+    .input-area button.enter-btn { background:#0078d4; border-color:#0078d4; color:#fff; }
+    .input-area button.enter-btn:active { background:#1a8ad4; }
 
-/* -- Key row -- */
-.key-row {
-  display:flex; gap:4px; padding:4px 8px 6px; flex-shrink:0;
-  flex-wrap:wrap; justify-content:center;
-}
-.key-row button {
-  padding:6px 8px; font-size:11px; font-family:monospace;
-  background:#2a2a2a; border:1px solid #454545; border-radius:4px;
-  color:#ccc; cursor:pointer; white-space:nowrap; min-width:28px;
-}
-.key-row button:active { background:#0078d4; color:#fff; }
-.key-row button.wide { min-width:48px; }
+    .empty { display:flex; align-items:center; justify-content:center; flex:1;
+              color:#666; font-size:14px; }
+    .cwd-bar {
+      padding:3px 8px; font-size:11px; color:#569cd6;
+      border-bottom:1px solid #2a2a2a; white-space:nowrap; overflow:hidden;
+      text-overflow:ellipsis;
+    }
 
-/* -- Input area -- */
-.input-area {
-  display:flex; gap:4px; padding:6px 8px;
-  background:#1f1f1f; border-top:1px solid #333; flex-shrink:0;
-}
-.input-area input {
-  flex:1; padding:8px 10px; font-size:14px; font-family:'Cascadia Code','Consolas',monospace;
-  background:#0c0c0c; border:1px solid #454545; border-radius:4px; color:#fff;
-  outline:none; min-width:0;
-}
-.input-area input:focus { border-color:#0078d4; }
-.input-area button {
-  padding:8px 10px; font-size:13px; background:#333; border:1px solid #454545;
-  border-radius:4px; color:#ccc; cursor:pointer; white-space:nowrap; flex-shrink:0;
-}
-.input-area button:active { background:#0078d4; color:#fff; }
-.input-area button.enter-btn { background:#0078d4; border-color:#0078d4; color:#fff; }
-.input-area button.enter-btn:active { background:#1a8ad4; }
+    .key-row {
+      display:flex; gap:4px; padding:4px 8px 6px; flex-shrink:0;
+      flex-wrap:wrap; justify-content:center;
+    }
+    .key-row button {
+      padding:6px 8px; font-size:11px; font-family:monospace;
+      background:#2a2a2a; border:1px solid #454545; border-radius:4px;
+      color:#ccc; cursor:pointer; white-space:nowrap; min-width:28px;
+    }
+    .key-row button:active { background:#0078d4; color:#fff; }
+    .key-row button.wide { min-width:48px; }
 
-.hidden { display:none !important; }
-</style>
+    .main-app { display:flex; flex-direction:column; height:100%; }
+    .hidden { display:none !important; }
+  </style>
 </head>
 <body>
-<div id="setup" class="setup-overlay"></div>
-<div class="header hidden" id="header">
-  <div class="dot" id="statusDot"></div>
-  <div id="tabButtons"></div>
-  <button class="tab-add" onclick="createTab()" title="新建标签">+</button>
-</div>
-<div class="toolbar hidden" id="toolbar">
-  <button id="btnWorkspace" onclick="togglePanel('workspace')">WORKSPACE</button>
-  <button id="btnHistory" onclick="togglePanel('history')">HISTORY</button>
-</div>
-<div class="panel" id="workspacePanel"></div>
-<div class="panel" id="historyPanel"></div>
-<div class="cwd-bar hidden" id="cwdBar"></div>
-<div class="terminal" id="terminal"><div class="empty">等待连接...</div></div>
-<div class="input-area hidden" id="inputArea">
-  <input type="text" id="cmdInput" placeholder="输入命令..." autocomplete="off" />
-  <button onclick="sendCommand(false)" title="发送文本">发送</button>
-  <button class="enter-btn" onclick="sendReturn()" title="回车">回车</button>
-</div>
-<div class="key-row hidden" id="keyRow">
-  <button onclick="sendKey('\x1b[H')" title="Home">Home</button>
-  <button onclick="sendKey('\x1b[F')" title="End">End</button>
-  <button onclick="sendKey('\x1b[A')" title="上箭头">↑</button>
-  <button onclick="sendKey('\x1b[B')" title="下箭头">↓</button>
-  <button onclick="sendKey('\x1b[D')" title="左箭头">←</button>
-  <button onclick="sendKey('\x1b[C')" title="右箭头">→</button>
-  <button onclick="sendKey('\x7f')" title="退格">⌫</button>
-  <button onclick="sendKey('\x1b[3~')" title="删除">Del</button>
-  <button class="wide" onclick="sendKey('\x1b[Z')" title="Shift+Tab">⇧Tab</button>
-</div>
+  <div id="setupPage" class="setup-page"></div>
+  <div id="termPage" class="term-page hidden">
+    <div class="header" id="header">
+      <div class="dot" id="statusDot"></div>
+      <div id="tabButtons"></div>
+      <button class="tab-add" onclick="createTab()" title="新建标签">+</button>
+    </div>
+    <div class="toolbar" id="toolbar">
+      <button id="btnWorkspace" onclick="togglePanel('workspace')">WORKSPACE</button>
+      <button id="btnHistory" onclick="togglePanel('history')">HISTORY</button>
+    </div>
+    <div class="panel" id="workspacePanel"></div>
+    <div class="panel" id="historyPanel"></div>
+    <div class="cwd-bar hidden" id="cwdBar"></div>
+    <div class="terminal" id="terminal"><div class="empty">等待终端连接...</div></div>
+    <div class="input-area hidden" id="inputArea">
+      <input type="text" id="cmdInput" placeholder="输入命令..." autocomplete="off" />
+      <button onclick="sendCommand(false)" title="发送文本">发送</button>
+      <button class="enter-btn" onclick="sendReturn()" title="回车">回车</button>
+    </div>
+    <div class="key-row hidden" id="keyRow">
+      <button onclick="sendKey(KEYS.HOME)" title="Home">Home</button>
+      <button onclick="sendKey(KEYS.END)" title="End">End</button>
+      <button onclick="sendKey(KEYS.UP)" title="上箭头">↑</button>
+      <button onclick="sendKey(KEYS.DOWN)" title="下箭头">↓</button>
+      <button onclick="sendKey(KEYS.LEFT)" title="左箭头">←</button>
+      <button onclick="sendKey(KEYS.RIGHT)" title="右箭头">→</button>
+      <button onclick="sendKey(KEYS.BS)" title="退格">⌫</button>
+      <button onclick="sendKey(KEYS.DEL)" title="删除">Del</button>
+      <button class="wide" onclick="sendKey(KEYS.STAB)" title="Shift+Tab">⇧Tab</button>
+    </div>
+  </div>
 
-<script>
-(function() {
-// ---- State ----
-var MODE = 'relay';
-var API_BASE = '';
-var TOKEN = '';
-var activeSessionId = '';
-var sessions = [];
-var lastSnapshotTime = 0;
-var pollTimer = null;
-var lastUpdate = 0;
-var inputHistory = [];
-var historyIdx = -1;
-var openPanel = null;
-var workspaceFolders = [];
-var historyRecords = [];
-var relayWs = null;
-var relayReconnectTimer = null;
-var recentList = [];
-var connecting = false;
+  <script>
+    // ====== State ======
+    var MODE = 'relay';
+    var API_BASE = '';
+    var TOKEN = '';
+    var CONFIG_HOST = '';
+    var CONFIG_PORT = 0;
+    var CONFIG_ROOM = '';
+    var CONFIG_TOKEN = '';
 
-// ---- Utils ----
-function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function escAttr(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;'); }
-function normPath(p) { return (p||'').replace(/\\/g,'/').replace(/\/+$/,'').toLowerCase(); }
-var ansiMap = {0:'#0c0c0c',1:'#c50f1f',2:'#13a10e',3:'#c19c00',4:'#0037da',5:'#881798',6:'#3a96dd',7:'#ccc',8:'#767676',9:'#e74856',10:'#16c60c',11:'#f9f1a5',12:'#3b78ff',13:'#b4009e',14:'#61d6d6',15:'#f2f2f2'};
-function ansiToCss(c) { return ansiMap[c]||'#ccc'; }
-function $(id) { return document.getElementById(id); }
+    var activeSessionId = '';
+    var sessions = [];
+    var lastSnapshotTime = 0;
+    var pollTimer = null;
+    var lastUpdate = 0;
+    var inputHistory = [];
+    var historyIdx = -1;
+    var openPanel = null;
+    var workspaceFolders = [];
+    var historyRecords = [];
+    var relayWs = null;
+    var relayReconnectTimer = null;
+    var ignoreNextActivePoll = false;
+    var KEYS = {
+      HOME: '\x1b[H', END: '\x1b[F',
+      UP: '\x1b[A', DOWN: '\x1b[B', LEFT: '\x1b[D', RIGHT: '\x1b[C',
+      BS: '\x7f', DEL: '\x1b[3~', STAB: '\x1b[Z'
+    };
+    var expectingNewSession = false;
+    var knownSessionIds = new Set();
 
-// ---- Storage ----
-function loadRecent() { try { var r = localStorage.getItem('ccterm_recent'); return r?JSON.parse(r):[]; } catch(e) { return[]; } }
-function saveRecent(l) { try { localStorage.setItem('ccterm_recent',JSON.stringify(l)); } catch(e) {} }
-function addRecent(cfg) {
-  var l = loadRecent();
-  l = l.filter(function(r) { return r.host!==cfg.host||r.port!==cfg.port; });
-  l.unshift({mode:cfg.mode,host:cfg.host,port:cfg.port,room:cfg.room||'',token:cfg.token||''});
-  if (l.length>5) l=l.slice(0,5);
-  saveRecent(l);
-}
+    // ====== Utils ======
+    function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function escAttr(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;'); }
+    function normPath(p) { return (p||'').replace(/\\/g,'/').replace(/\/+$/,'').toLowerCase(); }
+    function ansiToCss(code) {
+      var map = {0:'#0c0c0c',1:'#c50f1f',2:'#13a10e',3:'#c19c00',4:'#0037da',5:'#881798',6:'#3a96dd',7:'#ccc',8:'#767676',9:'#e74856',10:'#16c60c',11:'#f9f1a5',12:'#3b78ff',13:'#b4009e',14:'#61d6d6',15:'#f2f2f2'};
+      return map[code]||'#ccc';
+    }
+    function byId(id) { return document.getElementById(id); }
 
-// ---- QR Parser ----
-function parseQR(raw) {
-  if (!raw) return null;
-  try { var j=JSON.parse(raw); if (j.host&&j.port) return {mode:j.mode||(j.room?'relay':'http'),host:j.host,port:j.port,room:j.room||'',token:j.token||''}; } catch(e) {}
-  var m=raw.match(/^(https?|wss?):\/\/([^/:?]+)(?::(\d+))?(\/[^?]*)?(?:\?(.*))?$/);
-  if (m) { var pr=m[1],h=m[2],p=parseInt(m[3])||0; if(p<=0||p>65535)p=(pr==='https:'||pr==='wss:')?443:(pr==='ws:')?80:3001; var q=(m[5]||''),pm={}; q.split('&').forEach(function(x){var ei=x.indexOf('=');if(ei>=0)pm[decodeURIComponent(x.substring(0,ei))]=decodeURIComponent(x.substring(ei+1))}); var r=pm.room||''; return {mode:r?'relay':'http',host:h,port:p,room:r,token:pm.token||''}; }
-  if (raw.indexOf('ccterm://')===0) { var rest=raw.slice('ccterm://'.length),si=rest.indexOf('/'),hp=si>=0?rest.substring(0,si):rest,pq=si>=0?rest.substring(si+1):''; var ci=hp.indexOf(':'),h2=ci>=0?hp.substring(0,ci):hp,p2=3001; if(ci>=0){var pn=parseInt(hp.substring(ci+1));if(pn>0&&pn<=65535)p2=pn} var rm=pq,tk=''; if(rm.indexOf('?')>=0){var qi=rm.indexOf('?');var qs2=rm.substring(qi+1);rm=rm.substring(0,qi);qs2.split('&').forEach(function(x){var ei=x.indexOf('=');if(ei>=0&&decodeURIComponent(x.substring(0,ei))==='token')tk=decodeURIComponent(x.substring(ei+1))})} return {mode:rm?'relay':'http',host:h2,port:p2,room:rm,token:tk}; }
-  return null;
-}
+    // ====== Storage ======
+    function loadRecent(){ try{var r=localStorage.getItem('ccterm_recent');return r?JSON.parse(r):[]}catch(e){return[]} }
+    function saveRecent(l){ try{localStorage.setItem('ccterm_recent',JSON.stringify(l))}catch(e){} }
+    function addRecent(cfg){ var l=loadRecent(); l=l.filter(function(r){return r.host!==cfg.host||r.port!==cfg.port}); l.unshift({mode:cfg.mode,host:cfg.host,port:cfg.port,room:cfg.room||'',token:cfg.token||''}); if(l.length>5)l=l.slice(0,5); saveRecent(l) }
+    function saveConn(cfg){ try{localStorage.setItem('ccterm_conn',JSON.stringify(cfg))}catch(e){} }
 
-// ---- Show UI ----
-function postMsg(obj) { try { if(typeof uni!=='undefined'&&uni.postMessage) uni.postMessage({data:obj}); } catch(e) {} }
-function showTermUI() {
-  $('setup').classList.add('hidden');
-  $('header').classList.remove('hidden');
-  $('toolbar').classList.remove('hidden');
-  $('cwdBar').classList.remove('hidden');
-  $('inputArea').classList.remove('hidden');
-  $('keyRow').classList.remove('hidden');
-  $('terminal').innerHTML = '<div class="empty">等待终端连接...</div>';
-  postMsg({type:'terminal'});
-}
-function showSetup() {
-  $('setup').classList.remove('hidden');
-  $('header').classList.add('hidden');
-  $('toolbar').classList.add('hidden');
-  $('cwdBar').classList.add('hidden');
-  $('inputArea').classList.add('hidden');
-  $('keyRow').classList.add('hidden');
-  postMsg({type:'setup'});
-}
-function disconnect() {
-  if (relayWs) { try { relayWs.close(); } catch(e) {} relayWs = null; }
-  if (relayReconnectTimer) { clearTimeout(relayReconnectTimer); relayReconnectTimer = null; }
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-  sessions = []; activeSessionId = ''; lastUpdate = 0;
-  renderSetup();
-  showSetup();
-}
+    // ====== QR Code Parser ======
+    function parseQR(raw){
+      if(!raw)return null;
+      try{var j=JSON.parse(raw);if(j.host&&j.port)return{mode:j.mode||(j.room?'relay':'http'),host:j.host,port:j.port,room:j.room||'',token:j.token||''}}catch(e){}
+      var m=raw.match(/^(https?|wss?):\/\/([^/:?]+)(?::(\d+))?(\/[^?]*)?(?:\?(.*))?$/);
+      if(m){var pr=m[1],h=m[2],p=parseInt(m[3])||0;if(p<=0||p>65535)p=(pr==='https:'||pr==='wss:')?443:(pr==='ws:')?80:3001;var q=(m[5]||''),pm={};q.split('&').forEach(function(x){var ei=x.indexOf('=');if(ei>=0)pm[decodeURIComponent(x.substring(0,ei))]=decodeURIComponent(x.substring(ei+1))});var r=pm.room||'';return{mode:r?'relay':'http',host:h,port:p,room:r,token:pm.token||''}}
+      if(raw.indexOf('ccterm://')===0){var rest=raw.slice('ccterm://'.length),si=rest.indexOf('/'),hp=si>=0?rest.substring(0,si):rest,pq=si>=0?rest.substring(si+1):'';var ci=hp.indexOf(':'),h2=ci>=0?hp.substring(0,ci):hp,p2=3001;if(ci>=0){var pn=parseInt(hp.substring(ci+1));if(pn>0&&pn<=65535)p2=pn}var rm=pq,tk='';if(rm.indexOf('?')>=0){var qi=rm.indexOf('?');var qs2=rm.substring(qi+1);rm=rm.substring(0,qi);qs2.split('&').forEach(function(x){var ei=x.indexOf('=');if(ei>=0&&decodeURIComponent(x.substring(0,ei))==='token')tk=decodeURIComponent(x.substring(ei+1))})}return{mode:rm?'relay':'http',host:h2,port:p2,room:rm,token:tk}}
+      return null;
+    }
 
-// ---- Relay Mode ----
-function relayConnect(cfg) {
-  var wsUrl = 'ws://'+cfg.host+':'+cfg.port+'/?room='+encodeURIComponent(cfg.room||'')+'&role=phone';
-  relayWs = new WebSocket(wsUrl);
-  relayWs.onopen = function() {
-    showTermUI();
-    lastUpdate = Date.now();
-    relaySend({type:'requestSessions'}); relaySend({type:'requestWorkspace'}); relaySend({type:'requestHistory'});
-    if (pollTimer) clearInterval(pollTimer);
-    pollTimer = setInterval(function() {
-      relaySend({type:'requestSessions'});
-      relaySend({type:'requestSnapshot',sessionId:activeSessionId});
-      if (activeSessionId) { var ago=Date.now()-lastUpdate; $('statusDot').className='dot '+(ago<5000?'green':ago<15000?'yellow':'red'); }
-    }, 2000);
-  };
-  relayWs.onmessage = function(e) { try { relayHandle(JSON.parse(e.data)); } catch(err) {} };
-  relayWs.onclose = function() { $('statusDot').className='dot red'; if(relayReconnectTimer)clearTimeout(relayReconnectTimer); relayReconnectTimer=setTimeout(function(){relayConnect(cfg)},5000); };
-  relayWs.onerror = function() {};
-}
-function relaySend(o) { if(relayWs&&relayWs.readyState===WebSocket.OPEN)relayWs.send(JSON.stringify(o)); }
-function relayHandle(msg) {
-  if (msg.type==='sessions') {
-    sessions = msg.data||[]; updateTabs();
-    if (!activeSessionId&&sessions.length>0) { activeSessionId=msg.activeSessionId||sessions[0].id; updateTabs(); relaySend({type:'requestSnapshot',sessionId:activeSessionId}); }
-    else if (activeSessionId) { var f=false; for(var i=0;i<sessions.length;i++){if(sessions[i].id===activeSessionId){f=true;break}} if(!f&&sessions.length>0){activeSessionId=sessions[0].id;updateTabs();relaySend({type:'requestSnapshot',sessionId:activeSessionId})} }
-  } else if (msg.type==='snapshot') { if(msg.sessionId===activeSessionId&&msg.data&&msg.data.lines){lastUpdate=Date.now();renderSnapshot(msg.data)} }
-  else if (msg.type==='history') { historyRecords=msg.data||[]; renderHistory(); }
-  else if (msg.type==='workspace') { workspaceFolders=msg.data||[]; renderWorkspace(); }
-}
-function relaySwitchTab(id) { activeSessionId=id; updateTabs(); relaySend({type:'setActiveSession',sessionId:id}); relaySend({type:'requestSnapshot',sessionId:id}); }
-function relayCreateTab() { relaySend({type:'createTab',shell:'powershell'}); }
-function relaySendCmd(text,se) { if(!activeSessionId)return; relaySend({type:'command',sessionId:activeSessionId,text:text||'',sendEnter:se}); }
-function relaySendKey(seq) { if(!activeSessionId)return; relaySend({type:'command',sessionId:activeSessionId,text:seq,sendEnter:false}); }
-function relaySwitchFolder(index) {
-  var dir=workspaceFolders[index]; relaySend({type:'activateWorkspace',index:index,folder:dir||''});
-  if(dir){var nd=normPath(dir);var match=sessions.find(function(s){return s.cwd&&normPath(s.cwd).startsWith(nd)});if(match)relaySwitchTab(match.id)}
-  closePanel();
-}
+    // ====== UI helpers ======
+    function showTermUI(){
+      byId('setupPage').classList.add('hidden');
+      byId('termPage').classList.remove('hidden');
+      byId('cwdBar').classList.remove('hidden');
+      byId('inputArea').classList.remove('hidden');
+      byId('keyRow').classList.remove('hidden');
+      byId('terminal').innerHTML='<div class="empty">等待终端连接...</div>';
+    }
 
-// ---- HTTP Mode ----
-function httpConnect(cfg) {
-  API_BASE = 'http://'+cfg.host+':'+cfg.port;
-  TOKEN = cfg.token||'';
-  function ah() { var h={}; if(TOKEN)h['Authorization']='Bearer '+TOKEN; return h; }
-  function g(p) { return fetch(API_BASE+p,{headers:ah()}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}); }
-  function po(p,b) { return fetch(API_BASE+p,{method:'POST',headers:Object.assign({'Content-Type':'application/json'},ah()),body:JSON.stringify(b)}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}); }
-  var knownIds = new Set();
-  var expectingNew = false;
+    function shortTabTitle(s){ var t=s.tabTitle||s.id; return t.length>20?t.substring(0,18)+'...':t; }
 
-  Promise.all([g('/api/sessions'),g('/api/sessions/active')]).then(function(r){var sessList=r[0],active=r[1];
-    sessions=sessList; showTermUI();
-    knownIds = new Set(sessions.map(function(s){return s.id}));
-    if (sessions.length>0) { var tid=(active&&active.sessionId&&sessions.some(function(s){return s.id===active.sessionId}))?active.sessionId:sessions[0].id; switchTabHttp(tid,false); }
-    startHttpPoll(g, knownIds, expectingNew);
-    loadWS(g); loadHist(g);
-  }).catch(function(e){ $('errorMsg').textContent=e.message||'连接失败'; });
-}
-function switchTabHttp(id, notify) {
-  activeSessionId=id; lastSnapshotTime=0; fetchSnapHttp(); updateTabs();
-  if (notify!==false) { fetch(API_BASE+'/api/sessions/active',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},{'Authorization':TOKEN?'Bearer '+TOKEN:''}),body:JSON.stringify({sessionId:id})}).catch(function(){}) }
-}
-function createTabHttp() {
-  var knownIds=new Set(sessions.map(function(s){return s.id}));
-  fetch(API_BASE+'/api/tabs',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},{'Authorization':TOKEN?'Bearer '+TOKEN:''}),body:JSON.stringify({shell:'powershell'})}).catch(function(){});
-  setTimeout(function(){ fetch(API_BASE+'/api/sessions',{headers:{'Authorization':TOKEN?'Bearer '+TOKEN:''}}).then(function(r){return r.json()}).then(function(data){
-    for(var i=0;i<data.length;i++){if(!knownIds.has(data[i].id)){ sessions=data; updateTabs(); switchTabHttp(data[i].id); break; }}
-  }).catch(function(){}) }, 1000);
-}
-function startHttpPoll(g, knownIds, expectingNew) {
-  if (pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(function() {
-    fetchSnapHttp(); fetchSessionsHttp(g, knownIds, expectingNew); fetchActiveHttp(g); updateStatus();
-  }, 2000);
-}
-function fetchSnapHttp() { if(!activeSessionId)return; fetch(API_BASE+'/api/sessions/'+activeSessionId+'/snapshot',{headers:{'Authorization':TOKEN?'Bearer '+TOKEN:''}}).then(function(r){return r.json()}).then(function(snap){if(snap&&snap.lines){if(snap.timestamp===lastSnapshotTime)return;lastSnapshotTime=snap.timestamp;lastUpdate=Date.now();renderSnapshot(snap)}}).catch(function(){}) }
-function fetchSessionsHttp(g) { g('/api/sessions').then(function(data){ sessions=data; updateTabs(); if(!sessions.some(function(s){return s.id===activeSessionId})&&sessions.length>0)switchTabHttp(sessions[0].id) }).catch(function(){}) }
-function fetchActiveHttp(g) { g('/api/sessions/active').then(function(data){ if(data.sessionId&&data.sessionId!==activeSessionId&&sessions.some(function(s){return s.id===data.sessionId}))switchTabHttp(data.sessionId,false) }).catch(function(){}) }
-function loadWS(g) { g('/api/workspace').then(function(d){workspaceFolders=d||[];renderWorkspace()}).catch(function(){}) }
-function loadHist(g) { g('/api/history?limit=100').then(function(d){historyRecords=d||[];renderHistory()}).catch(function(){}) }
+    function updateTabButtons(){
+      var c=byId('tabButtons');
+      c.innerHTML=sessions.map(function(s){
+        return'<button class="tab-btn'+(s.id===activeSessionId?' active':'')+'" onclick="switchTab(\''+s.id+'\')">'+escHtml(shortTabTitle(s))+'</button>';
+      }).join('');
+    }
 
-// ---- Shared ----
-function createTab() { if(MODE==='relay')relayCreateTab(); else createTabHttp(); }
-function switchTab(id) { if(MODE==='relay')relaySwitchTab(id); else switchTabHttp(id); }
-function togglePanel(name) {
-  var panel=$(name==='workspace'?'workspacePanel':'historyPanel');
-  var btn=$(name==='workspace'?'btnWorkspace':'btnHistory');
-  if (openPanel===name) { closePanel(); return; }
-  if (openPanel) closePanel();
-  var rect=$('toolbar').getBoundingClientRect();
-  panel.style.top=rect.bottom+'px';
-  panel.classList.add('open'); btn.classList.add('active'); openPanel=name;
-  if (name==='workspace'&&MODE==='relay') relaySend({type:'requestWorkspace'});
-  if (name==='history'&&MODE==='relay') relaySend({type:'requestHistory'});
-}
-function closePanel() { if(openPanel){$(openPanel==='workspace'?'workspacePanel':'historyPanel').classList.remove('open');$(openPanel==='workspace'?'btnWorkspace':'btnHistory').classList.remove('active');openPanel=null} }
-function sendCommand(se) { var inp=$('cmdInput');var t=inp.value; if(!t&&!se)return; if(t){inputHistory.push(t);historyIdx=inputHistory.length} if(MODE==='relay')relaySendCmd(t,se); else fetch(API_BASE+'/api/sessions/'+activeSessionId+'/commands',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},{'Authorization':TOKEN?'Bearer '+TOKEN:''}),body:JSON.stringify({text:t||'',sendEnter:se})}).catch(function(){}); inp.value=''; inp.blur(); }
-function sendReturn() { if(MODE==='relay')relaySendCmd('',true); else {$('cmdInput').value=''; fetch(API_BASE+'/api/sessions/'+activeSessionId+'/commands',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},{'Authorization':TOKEN?'Bearer '+TOKEN:''}),body:JSON.stringify({text:'',sendEnter:true})}).catch(function(){})} $('cmdInput').blur(); }
-function sendKey(seq) { if(MODE==='relay')relaySendKey(seq); else fetch(API_BASE+'/api/sessions/'+activeSessionId+'/commands',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},{'Authorization':TOKEN?'Bearer '+TOKEN:''}),body:JSON.stringify({text:seq,sendEnter:false})}).catch(function(){}); $('cmdInput').blur(); }
+    // ====== Relay Mode ======
+    function relayConnect(cfg){
+      var wsUrl='ws://'+cfg.host+':'+cfg.port+'/?room='+encodeURIComponent(cfg.room||'')+'&role=phone';
+      relayWs=new WebSocket(wsUrl);
+      relayWs.onopen=function(){
+        showTermUI();
+        lastUpdate=Date.now();
+        relaySend({type:'requestSessions'});relaySend({type:'requestWorkspace'});relaySend({type:'requestHistory'});
+        if(pollTimer)clearInterval(pollTimer);
+        pollTimer=setInterval(function(){
+          relaySend({type:'requestSessions'});
+          relaySend({type:'requestSnapshot',sessionId:activeSessionId});
+          if(activeSessionId){var ago=Date.now()-lastUpdate;byId('statusDot').className='dot '+(ago<5000?'green':ago<15000?'yellow':'red')}
+        },2000);
+      };
+      relayWs.onmessage=function(e){try{relayHandle(JSON.parse(e.data))}catch(err){}}
+      relayWs.onclose=function(){byId('statusDot').className='dot red';if(relayReconnectTimer)clearTimeout(relayReconnectTimer);relayReconnectTimer=setTimeout(function(){relayConnect(cfg)},5000)}
+      relayWs.onerror=function(){}
+    }
+    function relaySend(o){if(relayWs&&relayWs.readyState===WebSocket.OPEN)relayWs.send(JSON.stringify(o))}
+    function relayHandle(msg){
+      if(msg.type==='sessions'){
+        sessions=msg.data||[];updateTabButtons();
+        if(!activeSessionId&&sessions.length>0){activeSessionId=msg.activeSessionId||sessions[0].id;updateTabButtons();relaySend({type:'requestSnapshot',sessionId:activeSessionId})}
+        else if(activeSessionId){var f=false;for(var i=0;i<sessions.length;i++){if(sessions[i].id===activeSessionId){f=true;break}}if(!f&&sessions.length>0){activeSessionId=sessions[0].id;updateTabButtons();relaySend({type:'requestSnapshot',sessionId:activeSessionId})}}
+      }else if(msg.type==='snapshot'){
+        if(msg.sessionId===activeSessionId&&msg.data&&msg.data.lines){lastUpdate=Date.now();renderSnapshot(msg.data)}
+      }else if(msg.type==='history'){historyRecords=msg.data||[];renderHistory();}
+      else if(msg.type==='workspace'){workspaceFolders=msg.data||[];renderWorkspace();}
+    }
+    function relaySwitchTab(id){activeSessionId=id;updateTabButtons();relaySend({type:'setActiveSession',sessionId:id});relaySend({type:'requestSnapshot',sessionId:id})}
+    function relayCreateTab(){relaySend({type:'createTab',shell:'powershell'})}
+    function relaySendCommand(text,se){if(!activeSessionId){_flashInput();return}relaySend({type:'command',sessionId:activeSessionId,text:text||'',sendEnter:se})}
+    function relaySendKey(seq){if(!activeSessionId){_flashInput();return}relaySend({type:'command',sessionId:activeSessionId,text:seq,sendEnter:false})}
+    function _flashInput(){var i=byId('cmdInput');if(i){i.style.borderColor='#e74856';setTimeout(function(){i.style.borderColor='#454545'},500)}}
+    function relaySwitchToFolder(index){var dir=workspaceFolders[index];relaySend({type:'activateWorkspace',index:index,folder:dir||''});if(dir){var nd=normPath(dir);var match=sessions.find(function(s){return s.cwd&&normPath(s.cwd).startsWith(nd)});if(match)relaySwitchTab(match.id)}closePanel()}
 
-// ---- Render ----
-function updateTabs() {
-  var c=$('tabButtons'); c.innerHTML=sessions.map(function(s){var t=s.tabTitle||s.id;if(t.length>20)t=t.substring(0,18)+'...'; return'<button class="tab-btn'+(s.id===activeSessionId?' active':'')+'" onclick="switchTab(\''+s.id+'\')">'+escHtml(t)+'</button>'}).join('');
-}
-function renderSnapshot(snap) {
-  var term=$('terminal'); var cwd=$('cwdBar'); if(snap.cwd)cwd.textContent=snap.cwd;
-  var h=''; for(var i=0;i<snap.lines.length;i++){var l=snap.lines[i];var cls=(i===snap.cursorRow)?'line cursor':'line';var text=l?escHtml(l.text):''; if(l&&l.fg&&l.fg!==7)h+='<div class="'+cls+'" style="color:'+ansiToCss(l.fg)+'">'+text+'</div>'; else h+='<div class="'+cls+'">'+text+'</div>'}
-  var wasBottom=term.scrollTop+term.clientHeight>=term.scrollHeight-50; term.innerHTML=h; if(wasBottom)term.scrollTop=term.scrollHeight;
-}
-function renderWorkspace() {
-  var p=$('workspacePanel'); if(workspaceFolders.length===0){p.innerHTML='<div class="panel-empty">没有工作区文件夹</div>';return}
-  p.innerHTML=workspaceFolders.map(function(f,i){var nf=normPath(f);var match=sessions.find(function(s){return s.cwd&&normPath(s.cwd).startsWith(nf)});var marker=match?' <span style="color:#16c60c;font-size:10px">●</span>':''; return'<div class="panel-item" onclick="switchToFolder('+i+')">📁 '+escHtml(f)+marker+'</div>'}).join('');
-}
-function renderHistory() {
-  var p=$('historyPanel'); if(historyRecords.length===0){p.innerHTML='<div class="panel-empty">没有历史记录</div>';return}
-  p.innerHTML=historyRecords.map(function(r){var t=new Date(r.timestamp).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});return'<div class="panel-item" onclick="insertCmd(\''+escAttr(r.command)+'\')"><div>'+escHtml(r.command)+'</div><span class="muted">'+t+'  '+escHtml(r.directory||'')+'</span></div>'}).join('');
-}
-function switchToFolder(index) { if(MODE==='relay')relaySwitchFolder(index); else { var dir=workspaceFolders[index]; fetch(API_BASE+'/api/workspace/activate',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},{'Authorization':TOKEN?'Bearer '+TOKEN:''}),body:JSON.stringify({index:index})}).catch(function(){}); if(dir){var nd=normPath(dir);var match=sessions.find(function(s){return s.cwd&&normPath(s.cwd).startsWith(nd)});if(match)switchTabHttp(match.id)} closePanel() } }
-function insertCmd(cmd) { $('cmdInput').value=cmd; $('cmdInput').focus(); closePanel(); }
-function updateStatus() { var ago=Date.now()-lastUpdate; $('statusDot').className='dot '+(ago<5000?'green':ago<15000?'yellow':'red'); }
+    // ====== HTTP Mode ======
+    function authHeaders(){var h={};if(TOKEN)h['Authorization']='Bearer '+TOKEN;return h}
+    function httpConnect(cfg){
+      API_BASE='http://'+cfg.host+':'+cfg.port;TOKEN=cfg.token||'';
+      knownSessionIds=new Set(sessions.map(function(s){return s.id}));
+      Promise.all([
+        fetch(API_BASE+'/api/sessions',{headers:authHeaders()}).then(function(r){return r.json()}),
+        fetch(API_BASE+'/api/sessions/active',{headers:authHeaders()}).then(function(r){return r.json()})
+      ]).then(function(r){var sessList=r[0],active=r[1];
+        sessions=sessList;showTermUI();
+        if(sessions.length>0){var tid=(active.sessionId&&sessions.some(function(s){return s.id===active.sessionId}))?active.sessionId:sessions[0].id;switchTab(tid,false)}
+        else{byId('terminal').innerHTML='<div class="empty">等待终端连接...</div>'}
+        startPolling();loadWorkspace();loadHistory();
+      }).catch(function(err){byId('errorMsg').textContent=err.message||'无法连接服务器'});
+    }
+    function createTabHttp(){
+      knownSessionIds=new Set(sessions.map(function(s){return s.id}));
+      expectingNewSession=true;
+      fetch(API_BASE+'/api/tabs',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},authHeaders()),body:JSON.stringify({shell:'powershell'})}).catch(function(){});
+    }
+    function switchTab(id,notifyServer){
+      if(MODE==='relay'){relaySwitchTab(id);return}
+      activeSessionId=id;lastSnapshotTime=0;fetchSnapshot();updateTabButtons();
+      if(notifyServer!==false){ignoreNextActivePoll=true;fetch(API_BASE+'/api/sessions/active',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},authHeaders()),body:JSON.stringify({sessionId:id})}).catch(function(){})}
+    }
+    function createTab(){if(MODE==='relay'){relayCreateTab();return}createTabHttp()}
+    function togglePanel(name){
+      var panel=byId(name==='workspace'?'workspacePanel':'historyPanel');
+      var btn=byId(name==='workspace'?'btnWorkspace':'btnHistory');
+      if(openPanel===name){panel.classList.remove('open');btn.classList.remove('active');openPanel=null;return}
+      if(openPanel)closePanel();
+      panel.classList.add('open');btn.classList.add('active');openPanel=name;
+      if(name==='workspace')loadWorkspace();
+      if(name==='history')loadHistory();
+    }
+    function closePanel(){if(openPanel){byId(openPanel==='workspace'?'workspacePanel':'historyPanel').classList.remove('open');byId(openPanel==='workspace'?'btnWorkspace':'btnHistory').classList.remove('active');openPanel=null}}
+    function loadWorkspace(){
+      if(MODE==='relay'){relaySend({type:'requestWorkspace'});return}
+      fetch(API_BASE+'/api/workspace',{headers:authHeaders()}).then(function(r){return r.json()}).then(function(d){workspaceFolders=d||[];renderWorkspace()}).catch(function(){});
+    }
+    function loadHistory(){
+      if(MODE==='relay'){relaySend({type:'requestHistory'});return}
+      fetch(API_BASE+'/api/history?limit=100',{headers:authHeaders()}).then(function(r){return r.json()}).then(function(d){historyRecords=d||[];renderHistory()}).catch(function(){});
+    }
+    function renderWorkspace(){
+      var p=byId('workspacePanel');
+      if(workspaceFolders.length===0){p.innerHTML='<div class="panel-empty">没有工作区文件夹</div>';return}
+      p.innerHTML=workspaceFolders.map(function(f,i){var nf=normPath(f);var match=sessions.find(function(s){return s.cwd&&normPath(s.cwd).startsWith(nf)});var marker=match?' <span style="color:#16c60c;font-size:10px">●</span>':'';return'<div class="panel-item panel-dir" onclick="switchToFolder('+i+')">📁 '+escHtml(f)+marker+'</div>'}).join('');
+    }
+    function renderHistory(){
+      var p=byId('historyPanel');
+      if(historyRecords.length===0){p.innerHTML='<div class="panel-empty">没有历史记录</div>';return}
+      p.innerHTML=historyRecords.map(function(r){var time=new Date(r.timestamp).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});return'<div class="panel-item" onclick="insertCmd(\''+escAttr(r.command)+'\')"><div>'+escHtml(r.command)+'</div><span class="muted">'+time+'  '+escHtml(r.directory||'')+'</span></div>'}).join('');
+    }
+    function switchToFolder(index){
+      if(MODE==='relay'){relaySwitchToFolder(index);return}
+      fetch(API_BASE+'/api/workspace/activate',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},authHeaders()),body:JSON.stringify({index:index})}).catch(function(){});
+      var dir=workspaceFolders[index];
+      if(dir){var nd=normPath(dir);var match=sessions.find(function(s){return s.cwd&&normPath(s.cwd).startsWith(nd)});if(match)switchTab(match.id)}
+      closePanel();
+    }
+    function insertCmd(cmd){byId('cmdInput').value=cmd;byId('cmdInput').focus();closePanel()}
+    function startPolling(){if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(poll,2000)}
+    function poll(){fetchSnapshot();fetchSessions();fetchActiveSession();updateStatus()}
+    function fetchActiveSession(){
+      fetch(API_BASE+'/api/sessions/active',{headers:authHeaders()}).then(function(r){return r.json()}).then(function(data){
+        if(ignoreNextActivePoll){ignoreNextActivePoll=false;return}
+        if(data.sessionId&&data.sessionId!==activeSessionId&&sessions.some(function(s){return s.id===data.sessionId}))switchTab(data.sessionId,false)
+      }).catch(function(){});
+    }
+    function fetchSnapshot(){
+      fetch(API_BASE+'/api/sessions/'+activeSessionId+'/snapshot',{headers:authHeaders()}).then(function(r){return r.json()}).then(function(snap){
+        if(!snap||!snap.lines)return;
+        if(snap.timestamp===lastSnapshotTime)return;
+        lastSnapshotTime=snap.timestamp;lastUpdate=Date.now();renderSnapshot(snap)
+      }).catch(function(){});
+    }
+    function fetchSessions(){
+      fetch(API_BASE+'/api/sessions',{headers:authHeaders()}).then(function(r){return r.json()}).then(function(data){
+        if(expectingNewSession){
+          var ns=null;for(var i=0;i<data.length;i++){if(!knownSessionIds.has(data[i].id)){ns=data[i];break}}
+          if(ns){expectingNewSession=false;sessions=data;updateTabButtons();switchTab(ns.id);return}
+        }
+        if(data.length!==sessions.length||JSON.stringify(data.map(function(s){return s.id}).sort())!==JSON.stringify(sessions.map(function(s){return s.id}).sort())){
+          sessions=data;updateTabButtons();
+          if(!sessions.some(function(s){return s.id===activeSessionId})&&sessions.length>0)switchTab(sessions[0].id)
+        }
+      }).catch(function(){});
+    }
+    function renderSnapshot(snap){
+      var term=byId('terminal'),cwd=byId('cwdBar');
+      if(snap.cwd)cwd.textContent=snap.cwd;
+      var h='';for(var i=0;i<snap.lines.length;i++){var l=snap.lines[i];var cls=(i===snap.cursorRow)?'line cursor':'line';var text=l?escHtml(l.text):'';if(l&&l.fg&&l.fg!==7)h+='<div class="'+cls+'" style="color:'+ansiToCss(l.fg)+'">'+text+'</div>';else h+='<div class="'+cls+'">'+text+'</div>'}
+      var wasBottom=term.scrollTop+term.clientHeight>=term.scrollHeight-50;term.innerHTML=h;if(wasBottom)term.scrollTop=term.scrollHeight;
+    }
+    function updateStatus(){var dot=byId('statusDot'),ago=Date.now()-lastUpdate;dot.className='dot '+(ago<5000?'green':ago<15000?'yellow':'red')}
 
-// ---- Setup page ----
-function requestScan() {
-  if (typeof uni !== 'undefined' && uni.postMessage) {
-    uni.postMessage({data: {type: 'scanQR'}});
-  }
-}
-function renderSetup() {
-  var recent=loadRecent(), rh='';
-  if (recent.length>0) { rh='<div class="recent"><div class="recent-title">最近连接</div>'; recent.forEach(function(r,i){rh+='<div class="recent-item" onclick="useRecent('+i+')"><span class="rhost">'+escHtml(r.host)+':'+r.port+'</span><span class="rmode">'+(r.mode==='relay'?'中转':'直连')+'</span></div>'}); rh+='<div class="recent-clear" onclick="clearRecent()">清除记录</div></div>'; }
-  $('setup').innerHTML =
-    '<div class="setup-box">'+
-      '<div class="logo-row"><div class="logo-dots"><div class="ld red"></div><div class="ld yellow"></div><div class="ld green"></div></div></div>'+
-      '<h2>CCTerm Remote</h2><div class="sub">远程终端控制</div>'+
-      '<div class="hint" onclick="requestScan()">📷 扫描二维码连接</div>'+
-      '<div class="mode-row"><button class="'+(MODE==='relay'?'active':'')+'" onclick="MODE=\'relay\';renderSetup()">中转模式</button><button class="'+(MODE==='http'?'active':'')+'" onclick="MODE=\'http\';renderSetup()">直连模式</button></div>'+
-      '<input id="inpHost" type="text" placeholder="服务器地址" autocomplete="off" /><br>'+
-      '<input id="inpPort" type="number" placeholder="端口" autocomplete="off" style="width:120px;margin-top:6px" />'+
-      (MODE==='relay'?'<input id="inpRoom" type="text" placeholder="房间号" autocomplete="off" style="width:260px;margin-top:6px" />':'')+
-      '<input id="inpToken" type="text" placeholder="Token（可选）" autocomplete="off" style="margin-top:6px" />'+
-      '<div id="errorMsg" class="error"></div>'+
-      '<button class="btn-connect" onclick="handleConnect()">连接</button>'+
-      rh+
-    '</div>';
-}
-window.useRecent = function(i) { var r=loadRecent()[i]; if(r){MODE=r.mode||'relay';renderSetup();setTimeout(function(){doConnect(r)},100)} };
-window.clearRecent = function() { localStorage.removeItem('ccterm_recent'); renderSetup(); };
-window.handleConnect = function() {
-  var h=($('inpHost')&&$('inpHost').value||'').trim(); var pv=($('inpPort')&&$('inpPort').value||'').trim();
-  var rm=($('inpRoom')&&$('inpRoom').value||'').trim(); var tk=($('inpToken')&&$('inpToken').value||'').trim();
-  if (!h) { $('errorMsg').textContent='请输入服务器地址'; return; }
-  var p=parseInt(pv)||0; if(p<=0||p>65535)p=MODE==='relay'?8080:3001;
-  $('errorMsg').textContent='';
-  doConnect({mode:MODE,host:h,port:p,room:MODE==='relay'?rm:'',token:tk});
-};
-function doConnect(cfg) {
-  MODE=cfg.mode; addRecent(cfg);
-  if (cfg.mode==='relay') relayConnect(cfg); else httpConnect(cfg);
-}
+    // ====== Command input ======
+    function sendCommand(sendEnter){
+      var input=byId('cmdInput'),text=input.value;
+      if(!text&&!sendEnter)return;
+      if(text){inputHistory.push(text);historyIdx=inputHistory.length}
+      if(MODE==='relay'){relaySendCommand(text,sendEnter)}
+      else{var body=JSON.stringify({text:text||'',sendEnter:sendEnter});fetch(API_BASE+'/api/sessions/'+activeSessionId+'/commands',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},authHeaders()),body:body}).catch(function(){})}
+      input.value='';input.blur();
+    }
+    function sendReturn(){
+      if(MODE==='relay'){relaySendCommand('',true)}
+      else{var body=JSON.stringify({text:'',sendEnter:true});fetch(API_BASE+'/api/sessions/'+activeSessionId+'/commands',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},authHeaders()),body:body}).catch(function(){})}
+      byId('cmdInput').blur();
+    }
+    function sendKey(seq){
+      if(MODE==='relay'){relaySendKey(seq)}
+      else{var body=JSON.stringify({text:seq,sendEnter:false});fetch(API_BASE+'/api/sessions/'+activeSessionId+'/commands',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},authHeaders()),body:body}).catch(function(){})}
+      byId('cmdInput').blur();
+    }
 
-// ---- Input history ----
-$('cmdInput').addEventListener('keydown',function(e){
-  if (e.key==='ArrowUp') { e.preventDefault(); if(inputHistory.length===0)return; if(historyIdx>0)historyIdx--; this.value=inputHistory[historyIdx]||'' }
-  else if (e.key==='ArrowDown') { e.preventDefault(); if(historyIdx<inputHistory.length-1){historyIdx++;this.value=inputHistory[historyIdx]||''}else{historyIdx=inputHistory.length;this.value=''} }
-  else if (e.key==='Enter') { e.preventDefault(); sendCommand(true); }
-});
+    // Input history navigation
+    byId('cmdInput').addEventListener('keydown',function(e){
+      if(e.key==='ArrowUp'){e.preventDefault();if(inputHistory.length===0)return;if(historyIdx>0)historyIdx--;this.value=inputHistory[historyIdx]||''}
+      else if(e.key==='ArrowDown'){e.preventDefault();if(historyIdx<inputHistory.length-1){historyIdx++;this.value=inputHistory[historyIdx]||''}else{historyIdx=inputHistory.length;this.value=''}}
+      else if(e.key==='Enter'){e.preventDefault();sendCommand(true)}
+    });
 
-// ---- Init ----
-function init() {
-  recentList=loadRecent(); renderSetup();
-  // Check URL for QR param (from native scan)
-  var qp=''; try{var m=location.search.match(/[?&]qr=([^&]*)/);if(m)qp=decodeURIComponent(m[1])}catch(e){}
-  if (qp) { var cfg=parseQR(qp); if(cfg){MODE=cfg.mode;renderSetup();doConnect(cfg);return} }
-  // Try saved connection
-  try { var saved=localStorage.getItem('ccterm_conn'); if(saved){var c=JSON.parse(saved);MODE=c.mode||'relay';renderSetup();setTimeout(function(){doConnect(c)},500)} } catch(e) {}
-}
-init();
-})();
-</script>
+    // ====== Setup page ======
+    function requestScan(){
+      if(typeof uni!=='undefined'&&uni.postMessage){uni.postMessage({data:{type:'scanQR'}})}
+    }
+    function renderSetup(){
+      var recent=loadRecent(),rh='';
+      if(recent.length>0){rh='<div class="recent"><div class="recent-title">最近连接</div>';recent.forEach(function(r,i){rh+='<div class="recent-item" onclick="useRecent('+i+')"><span class="rhost">'+escHtml(r.host)+':'+r.port+'</span><span class="rmode">'+(r.mode==='relay'?'中转':'直连')+'</span></div>'});rh+='<div class="recent-clear" onclick="clearRecent()">清除记录</div></div>'}
+      byId('setupPage').innerHTML=
+        '<div class="setup-box">'+
+          '<div class="logo-row"><div class="logo-dots"><div class="ld red"></div><div class="ld yellow"></div><div class="ld green"></div></div></div>'+
+          '<h2>CCTerm Remote</h2><div class="sub">远程终端控制</div>'+
+          '<button class="scan-btn" onclick="requestScan()">📷 扫描二维码连接</button>'+
+          '<div class="divider"><div class="line"></div><span>或手动输入</span><div class="line"></div></div>'+
+          '<div class="mode-row"><button class="'+(MODE==='relay'?'active':'')+'" onclick="setMode(\'relay\')">中转模式</button><button class="'+(MODE==='http'?'active':'')+'" onclick="setMode(\'http\')">直连模式</button></div>'+
+          '<input id="inpHost" type="text" placeholder="服务器地址" autocomplete="off" value="'+escHtml(CONFIG_HOST)+'" />'+
+          '<div class="port-row"><input class="port" id="inpPort" type="number" placeholder="端口" autocomplete="off" value="'+(CONFIG_PORT||'')+'" />'+(MODE==='relay'?'<input class="room" id="inpRoom" type="text" placeholder="房间号" autocomplete="off" value="'+escHtml(CONFIG_ROOM)+'" />':'')+'</div>'+
+          '<input id="inpToken" type="text" placeholder="Token（可选）" autocomplete="off" value="'+escHtml(CONFIG_TOKEN)+'" />'+
+          '<div id="errorMsg" class="error"></div>'+
+          '<button class="btn-connect" onclick="handleConnect()">连接</button>'+
+          rh+
+          '<div class="footer">确保手机与电脑在同一局域网<br>或通过中转服务器连接</div>'+
+        '</div>';
+    }
+    function setMode(m){ MODE=m; renderSetup(); }
+    function handleConnect(){
+      var h=(byId('inpHost')&&byId('inpHost').value||'').trim();
+      var pv=(byId('inpPort')&&byId('inpPort').value||'').trim();
+      var rm=(byId('inpRoom')&&byId('inpRoom').value||'').trim();
+      var tk=(byId('inpToken')&&byId('inpToken').value||'').trim();
+      if(!h){byId('errorMsg').textContent='请输入服务器地址';return}
+      var p=parseInt(pv)||0;if(p<=0||p>65535)p=MODE==='relay'?8080:3001;
+      byId('errorMsg').textContent='';
+      var cfg={mode:MODE,host:h,port:p,room:MODE==='relay'?rm:'',token:tk};
+      CONFIG_HOST=h;CONFIG_PORT=p;CONFIG_ROOM=rm;CONFIG_TOKEN=tk;
+      addRecent(cfg);saveConn(cfg);
+      doConnect(cfg);
+    }
+    function useRecent(i){var r=loadRecent()[i];if(r){MODE=r.mode||'relay';CONFIG_HOST=r.host||'';CONFIG_PORT=r.port||0;CONFIG_ROOM=r.room||'';CONFIG_TOKEN=r.token||'';renderSetup();doConnect(r)}}
+    function clearRecent(){localStorage.removeItem('ccterm_recent');renderSetup()}
+    function doConnect(cfg){
+      MODE=cfg.mode;TOKEN=cfg.token||'';
+      if(cfg.mode==='relay')relayConnect(cfg);else httpConnect(cfg);
+    }
+
+    // ====== Init ======
+    function init(){
+      renderSetup();
+      // Check for QR param from native scan
+      var qp='';try{var m=location.search.match(/[?&]qr=([^&]*)/);if(m)qp=decodeURIComponent(m[1])}catch(e){}
+      if(qp){var cfg=parseQR(qp);if(cfg){MODE=cfg.mode;CONFIG_HOST=cfg.host;CONFIG_PORT=cfg.port;CONFIG_ROOM=cfg.room||'';CONFIG_TOKEN=cfg.token||'';addRecent(cfg);saveConn(cfg);renderSetup();doConnect(cfg);return}}
+      // Auto-connect from saved config
+      try{var saved=localStorage.getItem('ccterm_conn');if(saved){var c=JSON.parse(saved);MODE=c.mode||'relay';CONFIG_HOST=c.host||'';CONFIG_PORT=c.port||0;CONFIG_ROOM=c.room||'';CONFIG_TOKEN=c.token||'';renderSetup();setTimeout(function(){doConnect(c)},300)}}catch(e){}
+    }
+    init();
+  </script>
 </body>
 </html>
