@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { useWorkspaceStore } from '../store/workspaceStore';
 import { useTabStore } from '../store/tabStore';
+import { usePaneStore } from '../store/paneStore';
 import '../styles/workspace.css';
 
 const WorkspacePanel: React.FC = () => {
@@ -31,6 +32,16 @@ const WorkspacePanel: React.FC = () => {
   }, []);
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
+
+  const handleNewTerminal = useCallback(async (folder: string) => {
+    const shellType = await window.shellAPI.getDefaultType();
+    const title = shellType === 'cmd' ? 'CMD' : 'PowerShell';
+    const tab = useTabStore.getState().addTab({ title, shell: shellType, cwd: folder });
+    usePaneStore.getState().initRoot(tab.id);
+    useTabStore.getState().setActiveTab(tab.id);
+    setActiveFolder(folder);
+    closeContextMenu();
+  }, [setActiveFolder, closeContextMenu]);
 
   React.useEffect(() => {
     if (!contextMenu) return;
@@ -76,6 +87,10 @@ const WorkspacePanel: React.FC = () => {
 
       {contextMenu && (
         <div className="workspace-context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
+          <div className="context-menu-item" onClick={() => handleNewTerminal(contextMenu.folder)}>
+            New Terminal
+          </div>
+          <div className="context-menu-divider" />
           <div className="context-menu-item danger" onClick={() => { removeFolder(contextMenu.folder); closeContextMenu(); }}>
             Remove from Workspace
           </div>

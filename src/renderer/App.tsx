@@ -62,6 +62,11 @@ const App: React.FC = () => {
     return () => { unsub(); unsubRelay(); };
   }, []);
 
+  // Sync defaultShellType changes back to main process
+  useEffect(() => {
+    window.shellAPI.setDefaultType(defaultShellType);
+  }, [defaultShellType]);
+
   // Listen for remote tab creation from phone
   useEffect(() => {
     const unsub = window.appAPI.onRemoteCreateTab((shellType: string, cwd?: string) => {
