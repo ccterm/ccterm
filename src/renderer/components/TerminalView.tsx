@@ -246,7 +246,7 @@ const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }
       cwd: tab?.cwd || getTabCwd || '',
       cols: term.cols,
       termRows: term.rows,
-      cursorRow: buffer.cursorY,
+      cursorRow: buffer.baseY + buffer.cursorY,
       cursorCol: buffer.cursorX,
       lines,
       timestamp: Date.now(),

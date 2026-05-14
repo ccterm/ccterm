@@ -204,6 +204,10 @@ export function startRemoteServer(port: number, authToken: string): Promise<numb
       if (!text && sendEnter !== true) {
         return res.status(400).json({ error: 'empty' });
       }
+      // Focus terminal window before processing command
+      BrowserWindow.getAllWindows().forEach((win) => {
+        if (!win.isDestroyed()) win.focus();
+      });
       addCommand(req.params.id, text || '', sendEnter ?? true);
       res.json({ ok: true });
     });
@@ -342,16 +346,47 @@ export function stopRemoteServer(): void {
 
 export function getLanIp(): string {
   const interfaces = os.networkInterfaces();
+  const candidates: Array<{ address: string; name: string }> = [];
+
   for (const name of Object.keys(interfaces)) {
     const iface = interfaces[name];
     if (!iface) continue;
     for (const addr of iface) {
       if (addr.family === 'IPv4' && !addr.internal) {
-        return addr.address;
+        candidates.push({ address: addr.address, name });
       }
     }
   }
-  return '127.0.0.1';
+
+  if (candidates.length === 0) return '127.0.0.1';
+
+  // Patterns that indicate a virtual / non-physical adapter
+  const virtualPatterns = [
+    /vEthernet/i, /VirtualBox/i, /VMware/i,
+    /Docker/i, /VPN/i, /Hyper-V/i,
+    /Loopback/i, /Bluetooth/i, /Teredo/i,
+    /WSL/i, /Pseudo/i, /Tunnel/i,
+  ];
+
+  // Patterns that indicate a real physical adapter
+  const physicalPatterns = [
+    /以太网/, /Ethernet/i, /Wi-?Fi/i, /WLAN/i,
+    /Realtek/i, /Intel/i, /Broadcom/i, /无线/,
+  ];
+
+  const isVirtual = (name: string) => virtualPatterns.some((p) => p.test(name));
+  const isPhysical = (name: string) => physicalPatterns.some((p) => p.test(name));
+
+  // Best: physical adapter
+  const physical = candidates.find((c) => isPhysical(c.name));
+  if (physical) return physical.address;
+
+  // Ok: not matching any virtual pattern
+  const nonVirtual = candidates.find((c) => !isVirtual(c.name));
+  if (nonVirtual) return nonVirtual.address;
+
+  // Fallback: whatever is left
+  return candidates[0].address;
 }
 
 export function getRemoteUrl(): string {

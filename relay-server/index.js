@@ -11,7 +11,15 @@ const PHONE_CLIENT_DIR = path.join(__dirname, 'phone-client');
 const rooms = new Map();
 
 const server = http.createServer((req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
+  const host = req.headers.host || 'localhost';
+  let url;
+  try {
+    url = new URL(req.url, `http://${host}`);
+  } catch {
+    res.writeHead(400);
+    res.end('Bad Request');
+    return;
+  }
 
   // Serve phone client
   if (url.pathname === '/phone' || url.pathname === '/phone/') {
@@ -40,7 +48,14 @@ const server = http.createServer((req, res) => {
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws, req) => {
-  const url = new URL(req.url || '/', `http://${req.headers.host}`);
+  const host = req.headers.host || 'localhost';
+  let url;
+  try {
+    url = new URL(req.url || '/', `http://${host}`);
+  } catch {
+    ws.close(4000, 'Invalid request URL');
+    return;
+  }
   const room = url.searchParams.get('room');
   const role = url.searchParams.get('role'); // 'desktop' | 'phone'
 

@@ -103,7 +103,10 @@ function doConnect(): void {
 function handleRelayMessage(msg: any): void {
   switch (msg.type) {
     case 'command': {
-      // Phone sent a command — push into shared command queue
+      // Focus terminal window before processing command
+      BrowserWindow.getAllWindows().forEach((win) => {
+        if (!win.isDestroyed()) win.focus();
+      });
       addCommand(msg.sessionId || '', msg.text || '', msg.sendEnter ?? true);
       break;
     }

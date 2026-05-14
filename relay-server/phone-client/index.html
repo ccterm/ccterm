@@ -73,9 +73,9 @@
       display:flex; flex-direction:column;
     }
     .terminal .line { white-space:pre; min-height:1.4em; word-break:break-all; }
-    .terminal .line.cursor::after {
-      content:''; display:inline-block; width:0.5em; height:1em;
-      background:#ccc; vertical-align:text-bottom; animation:blink 1s step-end infinite;
+    .terminal .cursor-char {
+      background:#ccc; color:#000;
+      animation:blink 1s step-end infinite;
     }
     @keyframes blink { 50% { opacity:0; } }
 
@@ -627,14 +627,19 @@
       let html = '';
       for (let i = 0; i < snap.lines.length; i++) {
         const line = snap.lines[i];
-        const isCursor = i === snap.cursorRow;
-        const cls = isCursor ? 'line cursor' : 'line';
-        const text = line ? escHtml(line.text) : '';
-        if (line && line.fg && line.fg !== 7) {
-          html += `<div class="${cls}" style="color:${ansiToCss(line.fg)}">${text}</div>`;
-        } else {
-          html += `<div class="${cls}">${text}</div>`;
+        const cls = 'line';
+        let text = line ? escHtml(line.text) : '';
+        const fgStyle = (line && line.fg && line.fg !== 7) ? ` style="color:${ansiToCss(line.fg)}"` : '';
+        if (i === snap.cursorRow && typeof snap.cursorCol === 'number') {
+          const col = snap.cursorCol;
+          if (col < text.length) {
+            text = text.substring(0, col) + `<span class="cursor-char">${text.charAt(col)}</span>` + text.substring(col + 1);
+          } else {
+            for (let j = text.length; j < col; j++) text += ' ';
+            text += '<span class="cursor-char"> </span>';
+          }
         }
+        html += `<div class="${cls}"${fgStyle}>${text}</div>`;
       }
       var wasAtBottom = terminal.scrollTop + terminal.clientHeight >= terminal.scrollHeight - 50;
       terminal.innerHTML = html;
