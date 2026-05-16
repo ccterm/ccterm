@@ -1,0 +1,239 @@
+/**
+ * webview-cache.uts
+ * WebView 页面通用缓存工具
+ *
+ * 缓存策略：
+ *   - localUrl：直接加载本地文件，不做缓存
+ *   - remoteUrl：
+ *       · 沙盒有文件 + 距上次检查 < 1小时 → 直接用缓存，不检查服务器
+ *       · 沙盒有文件 + 超过1小时 → 用缓存显示，后台 HEAD 检查 Last-Modified
+ *           - 服务器有更新 → 重新下载，更新沙盒
+ *           - 无更新 → 刷新检查时间戳
+ *       · 无沙盒 + 有 localUrl → 显示 localUrl，后台下载到沙盒
+ *       · 无沙盒 + 无 localUrl → 直接加载远程，成功后缓存
+ */
+
+const CACHE_HAS_PREFIX   = 'webview_has_'    // '1' 表示沙盒有文件
+const CACHE_LM_PREFIX    = 'webview_lm_'     // 上次 Last-Modified 值
+const CACHE_CHECK_PREFIX = 'webview_chk_'    // 上次检查时间戳（ms）
+
+const CHECK_INTERVAL_MS = 60 * 60 * 1000     // 1小时
+
+export type WebViewParams = {
+  localUrl  : string
+  remoteUrl : string
+  useCache  : string   // 'true' | 'false'，为 false 时跳过沙盒缓存，直接加载远程  
+  query		: string
+}
+
+export type WebViewResolveResult = {
+  src             : string
+  stage           : number   // 0=沙盒 1=本地 2=远程
+  remoteUrl       : string
+  localUrl        : string
+  sandboxFilename : string
+  needDownload    : boolean  // stage=2 时在 onWebviewLoad 里手动调用 downloadToSandbox
+}
+
+// ── 内部工具 ────────────────────────────────────────────────
+
+function urlToFilename(url : string) : string {
+  let s = url.replace('https://', '').replace('http://', '')
+  const qIdx = s.indexOf('?')
+  if (qIdx != -1) s = s.slice(0, qIdx)
+  s = s.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_')
+  if (s.length > 80) s = s.slice(0, 80)
+  return s + '.html'
+}
+
+function urlQuery(url : string) : string {
+  const qIdx = url.indexOf('?')
+  return qIdx != -1 ? url.slice(qIdx) : ''
+}
+
+function appendToken(url : string) : string {
+  const token = uni.getStorageSync('token') as string | null ?? ''
+  const sep = url.includes('?') ? '&' : '?'
+  return `${url}${sep}token=${token}`
+}
+
+function sandboxBase() : string {
+  return uni.env.USER_DATA_PATH.endsWith('/')
+    ? uni.env.USER_DATA_PATH.slice(0, -1)
+    : uni.env.USER_DATA_PATH
+}
+
+// 沙盒是否有文件
+function hasSandbox(filename : string) : boolean {
+  return uni.getStorageSync(CACHE_HAS_PREFIX + filename) as string == '1'
+}
+
+// 距上次检查是否超过 1 小时
+function isCheckExpired(filename : string) : boolean {
+  const ts = uni.getStorageSync(CACHE_CHECK_PREFIX + filename) as string
+  if (ts == null || ts == '') return true
+  return Date.now() - parseInt(ts) > CHECK_INTERVAL_MS
+}
+
+// 记录检查时间
+function markChecked(filename : string) : void {
+  uni.setStorageSync(CACHE_CHECK_PREFIX + filename, Date.now().toString())
+}
+
+// ── 核心：后台检查 + 按需更新（直接复用 downloadToSandbox） ──
+
+function checkAndUpdateIfNeeded(remoteUrl : string, filename : string) : void {
+  downloadToSandbox(remoteUrl, filename)
+}
+
+// ── 对外接口 ────────────────────────────────────────────────
+
+/**
+ * 根据参数决定加载哪个 src
+ * 命中沙盒缓存时，若超过1小时则后台检查 Last-Modified
+ */
+export function resolveWebSrc(params : WebViewParams) : WebViewResolveResult {
+
+  const useCache  = params.useCache != 'false'  // 默认 true，传 'false' 才禁用
+
+  let remote = params.remoteUrl
+  let local  = params.localUrl
+
+  // 只有 localUrl，直接加载，不做缓存
+  if (remote == '') {
+    return { src: local, stage: 1, remoteUrl: remote, localUrl: local, sandboxFilename: '', needDownload: false }
+  }
+
+  const filename = urlToFilename(remote)
+
+  // useCache=false：跳过沙盒，直接加载远程
+  if (!useCache) {
+    return { src: remote, stage: 2, remoteUrl: remote, localUrl: local, sandboxFilename: '', needDownload: false }
+  }
+
+  if (hasSandbox(filename)) {
+    // 命中沙盒缓存
+    const src = `${sandboxBase()}/${filename}` + urlQuery(remote)
+    // 超过1小时后台检查是否有更新
+    if (isCheckExpired(filename)) {
+      checkAndUpdateIfNeeded(remote, filename)
+    }
+    return { src, stage: 0, remoteUrl: remote, localUrl: local, sandboxFilename: filename, needDownload: false }
+  }
+
+  // 无沙盒 + 有 localUrl：先显示本地，后台下载
+  if (local != '') {
+    downloadToSandbox(remote, filename)
+    return { src: local, stage: 1, remoteUrl: remote, localUrl: local, sandboxFilename: filename, needDownload: false }
+  }
+
+  // 无沙盒无 localUrl：直接远程，onWebviewLoad 里手动触发缓存
+  return { src: remote, stage: 2, remoteUrl: remote, localUrl: local, sandboxFilename: filename, needDownload: true }
+}
+
+/**
+ * 后台下载到沙盒：先 HEAD 检查 Last-Modified，有变化才下载
+ */
+export function downloadToSandbox(remoteUrl : string, filename : string) : void {
+  // #ifdef APP
+  const savedLM = uni.getStorageSync(CACHE_LM_PREFIX + filename) as string ?? ''
+
+  // 先 HEAD 拿 Last-Modified
+  uni.request({
+    url: remoteUrl,
+    method: 'HEAD',
+    success: (res) => {
+      const serverLM = (res.header as UTSJSONObject)['last-modified']?.toString() ?? ''
+      markChecked(filename)
+
+      // 有 Last-Modified 且与本地一致，跳过下载
+      if (serverLM != '' && serverLM == savedLM) {
+        console.log(`[WebViewCache] Last-Modified 未变，跳过下载: ${filename}`)
+        return
+      }
+
+      // 需要下载
+      const fs       = uni.getFileSystemManager()
+      const savePath = `${sandboxBase()}/${filename}`
+      uni.downloadFile({
+        url: remoteUrl,
+        success: (dlRes) => {
+          if (dlRes.statusCode == 200) {
+            fs.saveFile({
+              tempFilePath: dlRes.tempFilePath,
+              filePath: savePath,
+              success: (_r) => {
+                uni.setStorageSync(CACHE_HAS_PREFIX + filename, '1')
+                if (serverLM != '') uni.setStorageSync(CACHE_LM_PREFIX + filename, serverLM)
+                console.log(`[WebViewCache] 缓存成功: ${filename}`)
+              },
+              fail: (_e) => { console.warn('[WebViewCache] 沙盒保存失败') }
+            })
+          }
+        },
+        fail: (_e) => { console.warn('[WebViewCache] 下载失败') }
+      })
+    },
+    fail: (_e) => {
+      // HEAD 失败（离线），直接尝试下载（首次无缓存时兜底）
+      if (!hasSandbox(filename)) {
+        const fs       = uni.getFileSystemManager()
+        const savePath = `${sandboxBase()}/${filename}`
+        uni.downloadFile({
+          url: remoteUrl,
+          success: (dlRes) => {
+            if (dlRes.statusCode == 200) {
+              fs.saveFile({
+                tempFilePath: dlRes.tempFilePath,
+                filePath: savePath,
+                success: (_r) => {
+                  uni.setStorageSync(CACHE_HAS_PREFIX + filename, '1')
+                  markChecked(filename)
+                },
+                fail: (_e2) => {}
+              })
+            }
+          },
+          fail: (_e2) => { console.warn('[WebViewCache] 离线下载失败') }
+        })
+      }
+    }
+  })
+  // #endif
+}
+
+/**
+ * 解析 navigateTo 传入的参数，返回 WebViewParams
+ */
+export function parseWebViewOptions(options : OnLoadOptions) : WebViewParams {
+  const urlParam = options['url']?.toString() ?? ''
+  const queryParam = options['query']?.toString() ?? ''
+  if (urlParam != '') {
+    const decoded = decodeURIComponent(urlParam) ?? ''
+    if (decoded.startsWith('http://') || decoded.startsWith('https://')) {
+      return { localUrl: '', remoteUrl: decoded,useCache: 'true' ,query: queryParam}
+    }
+    return { localUrl: decoded, remoteUrl: '', useCache: 'true' ,query: queryParam}
+  }
+
+  const dataParam = options['data']?.toString() ?? ''
+  if (dataParam != '') {
+    const obj = JSON.parse(decodeURIComponent(dataParam) ?? '{}') as UTSJSONObject
+    return {
+      localUrl  : (obj['localUrl']  as string | null) ?? '',
+      remoteUrl : (obj['remoteUrl'] as string | null) ?? '',
+      useCache  : (obj['useCache']  as string | null) ?? 'true',
+	  query		: queryParam
+    }
+  }
+
+  // 支持直接传 useCache 参数
+  const useCache = options['useCache']?.toString() ?? 'true'
+
+  return {
+    localUrl  : '',
+    remoteUrl : '',
+    useCache,
+	query: queryParam
+  }
+}

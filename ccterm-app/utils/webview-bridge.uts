@@ -1,0 +1,528 @@
+/**
+ * WebView Bridge
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * 提供两类能力：
+ *   1. 缓存加载：沙盒缓存 > 内置文件 > 远程 URL 的优先级加载 + 后台静默更新
+ *   2. 双向通信：网页调用原生能力，原生回传结果给网页
+ *
+ * ───────────────────────────────────────────────────────────────
+ * 【原生页面用法】
+ *
+ * import { resolveWebSrc, checkAndUpdate, handleBridgeAction } from '@/utils/webview-bridge.uts'
+ *
+ * // 1. 加载 webview
+ * resolveWebSrc('cache.html', '/hybrid/html/page.html', 'https://example.com/page', (result) => {
+ *   this.webSrc = result.src + '?foo=bar'  // 查询参数由调用方自行拼接
+ *   this.stage = result.stage              // 0=沙盒 1=内置 2=远程
+ * })
+ *
+ * // 2. 后台检查更新
+ * checkAndUpdate('https://example.com/page', 'cache.html', 'my_cache_lm', (msg) => {
+ *   this.statusText = msg
+ * })
+ *
+ * // 3. 处理网页消息
+ * onMessage(e: UniWebViewMessageEvent): void {
+ *   const msg = e.detail.data[0] as UTSJSONObject
+ *   const actionRaw = msg['action']
+ *   if (actionRaw == null) return
+ *   const action = actionRaw.toString()
+ *   const paramsRaw = msg['params']
+ *   const params = (paramsRaw != null ? paramsRaw as UTSJSONObject : {}) as UTSJSONObject
+ *   handleBridgeAction(action, params, 'my-webview-id', this)
+ * }
+ *
+ * ───────────────────────────────────────────────────────────────
+ * 【网页端用法】
+ *
+ * // 初始化 bridge（放在 HTML 底部，uni.webview.js 加载后执行）
+ * window._bridgeCbs = {}
+ *
+ * // 发送消息给原生（带回调）
+ * function callBridge(action, params, callback) {
+ *   const callbackId = Date.now() + '_' + Math.random().toString(36).slice(2)
+ *   if (callback) window._bridgeCbs[callbackId] = callback
+ *   uni.webView.postMessage({ data: { action, params: { ...params, callbackId } } })
+ * }
+ *
+ * // 原生回传时触发（原生通过 evalJS 调用）
+ * window.onBridgeCallback = function(payload) {
+ *   const cb = window._bridgeCbs?.[payload.callbackId]
+ *   if (cb) { cb(payload); delete window._bridgeCbs[payload.callbackId] }
+ * }
+ *
+ * // 示例调用
+ * callBridge('showModal', { title: '提示', content: '确认吗？' }, (res) => {
+ *   if (res.ok) console.log('用户点了确认')
+ *   else console.log('用户取消了:', res.error)
+ * })
+ *
+ * callBridge('getStorage', { key: 'token' }, (res) => {
+ *   if (res.ok) console.log('token:', res.data.value)
+ * })
+ *
+ * callBridge('emit', { event: 'cartUpdated', data: { count: 3 } })
+ * // 原生监听：uni.$on('cartUpdated', (data) => { ... })
+ *
+ * ───────────────────────────────────────────────────────────────
+ * 【回调结构】
+ *
+ * 成功：{ callbackId, ok: true,  data: { ...返回数据 } }
+ * 失败：{ callbackId, ok: false, error: 'cancel' | 'fail' | ... }
+ *
+ * ───────────────────────────────────────────────────────────────
+ * 【支持的 action 列表】
+ *
+ * 交互反馈：
+ *   showToast      { title, icon?:'success'|'none', duration?:number }
+ *   showLoading    { title? }
+ *   hideLoading    {}
+ *   showModal      { title?, content?, confirmText?, cancelText? }  → ok/cancel
+ *   showActionSheet{ itemList:'A,B,C' }  → { tapIndex, item }
+ *
+ * 页面路由：
+ *   navigateTo     { url }
+ *   navigateBack   { delta?:number }
+ *   reLaunch       { url }
+ *   switchTab      { url }
+ *
+ * 数据缓存：
+ *   setStorage     { key, value }
+ *   getStorage     { key }  → { value }
+ *   removeStorage  { key }
+ *   clearStorage   {}
+ *
+ * 导航栏：
+ *   setNavTitle    { title }
+ *   setNavColor    { frontColor:'#ffffff', backgroundColor:'#000000' }
+ *
+ * 图片/媒体：
+ *   chooseImage    { count?:number }  → { tempFilePaths }
+ *   previewImage   { urls:'url1,url2', current?:'url1' }
+ *   chooseMedia    { count?:number }  → { count }
+ *
+ * 剪贴板：
+ *   setClipboard   { data }
+ *   getClipboard   {}  → { data }
+ *
+ * 系统信息：
+ *   getSystemInfo  {}  → { os, osVersion, model, screenWidth, screenHeight, isIos, isAndroid }
+ *
+ * 定位：
+ *   getLocation    { type?:'gcj02'|'wgs84' }  → { lat, lng, accuracy }
+ *
+ * 扫码：
+ *   scanCode       {}  → { result, type }
+ *
+ * 文件：
+ *   openDocument   { filePath }
+ *
+ * 事件总线（网页 → 原生广播）：
+ *   emit           { event:'eventName', data?:{} }
+ *   // 原生用 uni.$on('eventName', handler) 监听，uni.$off 取消
+ */
+
+// ─── 缓存加载 ────────────────────────────────────────────────────
+
+export type LoadResult = {
+	src : string
+	stage : number // 0=沙盒, 1=内置, 2=远程
+}
+
+/**
+ * 按优先级确定 webview 加载源：沙盒 > 内置 > 远程
+ * 返回的 src 不含查询参数，调用方自行拼接
+ */
+export function resolveWebSrc(
+	sandboxFilename : string,
+	localSrc : string,
+	remoteSrc : string,
+	onReady : (result : LoadResult) => void
+) {
+	// #ifdef APP
+	const fs = uni.getFileSystemManager()
+	const base = uni.env.USER_DATA_PATH.endsWith('/') ? uni.env.USER_DATA_PATH.slice(0, -1) : uni.env.USER_DATA_PATH
+	const sandboxPath = `${base}/${sandboxFilename}`
+	fs.getFileInfo({
+		filePath: sandboxPath,
+		success: (_res) => {
+			onReady({ src: sandboxPath, stage: 0 })
+		},
+		fail: (_err) => {
+			if (localSrc != '') {
+				onReady({ src: localSrc, stage: 1 })
+			} else {
+				onReady({ src: remoteSrc, stage: 2 })
+			}
+		}
+	})
+	// #endif
+	// #ifndef APP
+	onReady({ src: remoteSrc, stage: 2 })
+	// #endif
+}
+
+/**
+ * 后台检查远程是否有更新，有则下载到沙盒（下次生效）
+ * 通过 Last-Modified 头判断版本
+ */
+export function checkAndUpdate(
+	remoteUrl : string,
+	sandboxFilename : string,
+	cacheKey : string,
+	onStatus : (msg : string) => void
+) {
+	const savedLM = uni.getStorageSync(cacheKey) as string
+	uni.request({
+		url: remoteUrl,
+		method: 'HEAD',
+		success: (res) => {
+			const serverLM = (res.header as UTSJSONObject)['last-modified']?.toString() ?? ''
+			if (serverLM != '' && serverLM != savedLM) {
+				onStatus('后台更新中...')
+				downloadAndSave(remoteUrl, sandboxFilename, cacheKey, serverLM, onStatus)
+			} else {
+				onStatus('已是最新')
+			}
+		},
+		fail: (_e) => { onStatus('离线') }
+	})
+}
+
+function downloadAndSave(
+	remoteUrl : string,
+	sandboxFilename : string,
+	cacheKey : string,
+	newLM : string,
+	onStatus : (msg : string) => void
+) {
+	// #ifdef APP
+	const fs = uni.getFileSystemManager()
+	const base = uni.env.USER_DATA_PATH.endsWith('/') ? uni.env.USER_DATA_PATH.slice(0, -1) : uni.env.USER_DATA_PATH
+	const savePath = `${base}/${sandboxFilename}`
+	uni.downloadFile({
+		url: remoteUrl,
+		success: (res) => {
+			if (res.statusCode == 200) {
+				fs.saveFile({
+					tempFilePath: res.tempFilePath,
+					filePath: savePath,
+					success: (_r) => {
+						uni.setStorageSync(cacheKey, newLM)
+						onStatus('后台更新完成↑')
+					},
+					fail: (_e) => { onStatus('保存失败') }
+				})
+			}
+		},
+		fail: (_e) => { onStatus('下载失败') }
+	})
+	// #endif
+}
+
+// ─── Bridge 交互 ─────────────────────────────────────────────────
+
+/**
+ * 处理网页发来的 action，执行对应原生能力，通过 evalJS 回传结果
+ *
+ * 回调结构：
+ *   成功 → window.onBridgeCallback({ callbackId, ok:true,  data:{} })
+ *   失败 → window.onBridgeCallback({ callbackId, ok:false, error:'' })
+ */
+export function handleBridgeAction(
+	action : string,
+	params : UTSJSONObject,
+	webviewId : string,
+	component : ComponentPublicInstance
+) {
+	const callbackId = params['callbackId']?.toString() ?? ''
+
+	// 成功回调
+	const ok = (data : UTSJSONObject) => {
+		const payload = { callbackId, ok: true, data } as UTSJSONObject
+		const ctx = uni.createWebviewContext(webviewId, component)
+		ctx?.evalJS(`window.onBridgeCallback(${JSON.stringify(payload)})`)
+	}
+
+	// 失败/取消回调
+	const fail = (error : string) => {
+		const payload = { callbackId, ok: false, error } as UTSJSONObject
+		const ctx = uni.createWebviewContext(webviewId, component)
+		ctx?.evalJS(`window.onBridgeCallback(${JSON.stringify(payload)})`)
+	}
+
+	// ── 交互反馈 ──────────────────────────────────────────────────
+	if (action == 'report') {
+		const content = params['content']?.toString() ?? ''
+		if (content == null || content.length < 10) {
+			return
+		}
+		showKLineDataReport(content)
+	} else if (action == 'copy') {
+		const content = params['content']?.toString() ?? ''
+		const success_text = params['success_text']?.toString() ?? "已复制"
+		uni.setClipboardData({
+			data: content,
+			success: () => {
+				// 可选：原生 toast 确认
+				uni.showToast({
+					title: success_text
+				})
+			}
+		})
+	} else if (action == 'showToast') {
+		
+		const title = params['title']?.toString() ?? ''
+		console.log('--------:'+action)
+		console.log('--------:'+JSON.stringify(params))
+		if (title == '') return
+		uni.showToast({
+			title: title,
+			icon: params['icon']?.toString() == 'success' ? 'success' : 'none',
+			duration: params['duration'] != null ? parseInt(params['duration']!.toString()) : 2000
+		})
+
+	} else if (action == 'showLoading') {
+		uni.showLoading({ title: params['title']?.toString() ?? '' })
+
+	} else if (action == 'hideLoading') {
+		uni.hideLoading()
+
+	} else if (action == 'showModal') {
+		uni.showModal({
+			title: params['title']?.toString() ?? '',
+			content: params['content']?.toString() ?? '',
+			confirmText: params['confirmText']?.toString() ?? '确定',
+			cancelText: params['cancelText']?.toString() ?? '取消',
+			success: (res) => {
+				if (res.confirm) ok({ action: 'confirm' } as UTSJSONObject)
+				else fail('cancel')
+			}
+		})
+
+	} else if (action == 'showActionSheet') {
+		const itemsStr = params['itemList']?.toString() ?? ''
+		if (itemsStr == '') return
+		const items = itemsStr.split(',').filter(s => s.trim() != '')
+		uni.showActionSheet({
+			itemList: items,
+			success: (res) => { ok({ tapIndex: res.tapIndex, item: items[res.tapIndex] } as UTSJSONObject) },
+			fail: (_e) => { fail('cancel') }
+		})
+
+	// ── 页面路由 ──────────────────────────────────────────────────
+	} else if (action == 'navigateTo' || action == 'navigate') {
+		const url = params['url']?.toString() ?? ''
+		if (url == '') return
+		uni.navigateTo({ url: url })
+
+	} else if (action == 'navigateBack') {
+		const deltaRaw = params['delta']
+		uni.navigateBack({ delta: deltaRaw != null ? parseInt(deltaRaw.toString()) : 1 })
+
+	} else if (action == 'reLaunch') {
+		const url = params['url']?.toString() ?? ''
+		if (url == '') return
+		uni.reLaunch({ url: url })
+
+	} else if (action == 'switchTab') {
+		const url = params['url']?.toString() ?? ''
+		if (url == '') return
+		uni.switchTab({ url: url })
+
+	// ── 数据缓存 ──────────────────────────────────────────────────
+	} else if (action == 'setStorage') {
+		const key = params['key']?.toString() ?? ''
+		if (key == '') return
+		uni.setStorageSync(key, params['value']?.toString() ?? '')
+		ok({} as UTSJSONObject)
+
+	} else if (action == 'getStorage') {
+		const key = params['key']?.toString() ?? ''
+		if (key == '') return
+		const val = uni.getStorageSync(key)
+		//console.info(val as UTSJSONObject)
+		ok({ value: val } as UTSJSONObject)
+
+	} else if (action == 'removeStorage') {
+		const key = params['key']?.toString() ?? ''
+		if (key == '') return
+		uni.removeStorageSync(key)
+		ok({} as UTSJSONObject)
+
+	} else if (action == 'clearStorage') {
+		uni.clearStorageSync()
+		ok({} as UTSJSONObject)
+
+	// ── 导航栏 ────────────────────────────────────────────────────
+	} else if (action == 'setNavTitle') {
+		const title = params['title']?.toString() ?? ''
+		if (title == '') return
+		uni.setNavigationBarTitle({ title: title })
+
+	} else if (action == 'setNavColor') {
+		const front = params['frontColor']?.toString() ?? ''
+		const bg = params['backgroundColor']?.toString() ?? ''
+		if (front == '' || bg == '') return
+		uni.setNavigationBarColor({ frontColor: front, backgroundColor: bg })
+
+	// ── 图片/媒体 ─────────────────────────────────────────────────
+	} else if (action == 'chooseImage') {
+		const countRaw = params['count']
+		uni.chooseImage({
+			count: countRaw != null ? parseInt(countRaw.toString()) : 9,
+			success: (res) => { ok({ tempFilePaths: res.tempFilePaths } as UTSJSONObject) },
+			fail: (_e) => { fail('cancel') }
+		})
+
+	} else if (action == 'previewImage') {
+		const urlsStr = params['urls']?.toString() ?? ''
+		if (urlsStr == '') return
+		const urls = urlsStr.split(',').filter(u => u.trim() != '')
+		const current = params['current']?.toString() ?? urls[0]
+		uni.previewImage({ urls: urls, current: current })
+
+	} else if (action == 'chooseMedia') {
+		const countRaw = params['count']
+		uni.chooseMedia({
+			count: countRaw != null ? parseInt(countRaw.toString()) : 9,
+			mediaType: ['image', 'video'],
+			success: (res) => { ok({ count: res.tempFiles.length } as UTSJSONObject) },
+			fail: (_e) => { fail('cancel') }
+		})
+
+	// ── 剪贴板 ────────────────────────────────────────────────────
+	} else if (action == 'setClipboard') {
+		const data = params['data']?.toString() ?? ''
+		const success_text = params['success_text']?.toString() ?? "已复制"
+		if (data == '') return
+		uni.setClipboardData({
+			data: data,
+			success: () => {
+				uni.showToast({ title: success_text, icon: 'success' })
+				ok({} as UTSJSONObject)
+			}
+		})
+
+	} else if (action == 'getClipboard') {
+		uni.getClipboardData({
+			success: (res) => { ok({ data: res.data } as UTSJSONObject) },
+			fail: (_e) => { fail('fail') }
+		})
+
+	// ── 系统信息 ──────────────────────────────────────────────────
+	} else if (action == 'getSystemInfo') {
+		const sys = uni.getSystemInfoSync()
+		ok({
+			os: sys.osName,
+			osVersion: sys.osVersion,
+			model: sys.deviceModel,
+			screenWidth: sys.screenWidth,
+			screenHeight: sys.screenHeight,
+			isIos: sys.osName == 'ios',
+			isAndroid: sys.osName == 'android'
+		} as UTSJSONObject)
+
+	// ── 定位 ──────────────────────────────────────────────────────
+	} else if (action == 'getLocation') {
+		uni.getLocation({
+			type: params['type']?.toString() ?? 'gcj02',
+			success: (res) => {
+				ok({ lat: res.latitude, lng: res.longitude, accuracy: res.accuracy } as UTSJSONObject)
+			},
+			fail: (_e) => { fail('fail') }
+		})
+
+	// ── 扫码 ──────────────────────────────────────────────────────
+	} else if (action == 'scanCode') {
+		uni.scanCode({
+			success: (res) => { ok({ result: res.result, type: res.scanType } as UTSJSONObject) },
+			fail: (_e) => { fail('cancel') }
+		})
+
+	// ── 文件 ──────────────────────────────────────────────────────
+	} else if (action == 'openDocument') {
+		const filePath = params['filePath']?.toString() ?? ''
+		if (filePath == '') return
+		uni.openDocument({
+			filePath: filePath,
+			success: () => { ok({} as UTSJSONObject) },
+			fail: (_e) => { fail('fail') }
+		})
+
+	// ── 支付 ──────────────────────────────────────────────────────
+	} else if (action == 'requestPayment') {
+		// 支付宝支付
+		const provider = params['provider']?.toString() ?? ''
+		const orderInfo = params['orderInfo']?.toString() ?? ''
+		if (provider == '' || orderInfo == '') return
+		uni.requestPayment({
+			provider: provider,
+			orderInfo: orderInfo,
+			success: (_res: RequestPaymentSuccess) => {
+				ok({} as UTSJSONObject)
+			},
+			fail: (err: RequestPaymentFail) => {
+				fail(err.errCode?.toString() ?? '支付失败')
+			}
+		} as RequestPaymentOptions)
+
+	} else if (action == 'requestIAP') {
+		// #ifdef APP-IOS
+		// Apple IAP（仅 iOS）
+		const productId = params['productId']?.toString() ?? ''
+		const appAccountToken = params['appAccountToken']?.toString() ?? ''
+		if (productId == '') return
+		uni.requestVirtualPayment({
+			apple: {
+				productId: productId,
+				appAccountToken: appAccountToken,
+				quantity: 1
+			},
+			success: (res) => {
+				uni.hideLoading()
+				ok(res as UTSJSONObject)
+			},
+			fail: (err) => {
+				uni.hideLoading()
+				fail((err.errCode?.toString() ?? err.errMsg) ?? '支付失败')
+			}
+		} as any)
+		// #endif
+
+	} else if (action == 'finishIAPTransaction') {
+		// #ifdef APP-IOS
+		try {
+			const manager = uni.getVirtualPaymentManager()
+			manager.finishTransaction({
+				transaction: params,
+				success: () => { ok({} as UTSJSONObject) },
+				fail: (_err: any) => { fail('关单失败') }
+			} as any)
+		} catch (e) {
+			fail('关单异常')
+		}
+		// #endif
+
+	// ── 事件总线（网页 → 原生广播） ───────────────────────────────
+	// 原生监听：uni.$on('eventName', handler)，记得在 onUnmounted 里 uni.$off
+	} else if (action == 'emit') {
+		const event = params['event']?.toString() ?? ''
+		if (event == '') return
+		const dataRaw = params['data']
+		const data = dataRaw != null ? dataRaw as UTSJSONObject : {} as UTSJSONObject
+		uni.$emit(event, data)
+	}
+}
+
+export function showKLineDataReport(content : string) : void {
+	const params = {
+		'content' : content
+	} as UTSJSONObject
+	uni.setStorageSync('showKLineDataReport', JSON.stringify(params))
+
+	uni.navigateTo({
+		url: '/pages/report/index'
+	})
+}

@@ -1,0 +1,217 @@
+/**
+ * webview-utils.uts
+ * WebView 页面通用业务工具
+ *
+ * 包含：
+ *   - 股票关注列表的增删操作
+ *   - 股票 action 分发
+ *   - 链接复制
+ */
+// ── 关注列表 key ────────────────────────────────────────────
+
+export function todayPoolKey() : string {
+  let uid = ''
+  try {
+    const info = uni.getStorageSync('userInfo') as string
+    if (info != null && info != '') {
+      const obj = JSON.parse(info) as UTSJSONObject
+      uid = (obj['id']?.toString() ?? '')
+    }
+  } catch (_) {}
+  return `mypool_data${uid != '' ? '_' + uid : ''}`
+}
+
+// ── 股票关注列表操作 ────────────────────────────────────────
+
+export function addStockToMyPool(code : string, name : string) : void {
+  try {
+    const key = todayPoolKey()
+    const raw = uni.getStorageSync(key) as string
+    let allData = {} as UTSJSONObject
+    if (raw != null && raw.length > 0) {
+      try { allData = JSON.parse(raw) as UTSJSONObject } catch (_) {}
+    }
+    const d = new Date()
+    const y = d.getFullYear().toString()
+    const m = (d.getMonth() + 1).toString().padStart(2, '0')
+    const day = d.getDate().toString().padStart(2, '0')
+    const ds = y + m + day
+    const rawEntry = allData[ds]
+    const entry = rawEntry != null ? rawEntry as UTSJSONObject : { content: '', focus: '', memo: '' } as UTSJSONObject
+    const contentStr = (entry['content'] as string) ?? ''
+    if (contentStr.length > 0) {
+      const items = contentStr.split(' ')
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i].trim()
+        if (item.startsWith(code) || item.startsWith(name) || item.endsWith(code) || item.endsWith(name)) {
+          uni.showToast({ title: '股票已存在', icon: 'none' })
+          return
+        }
+      }
+      entry['content'] = contentStr + ' ' + code + ',' + name
+    } else {
+      entry['content'] = `${code},${name}`
+    }
+    allData[ds] = entry as UTSJSONObject
+    uni.setStorageSync(key, JSON.stringify(allData))
+    uni.showToast({ title: '已添加到关注列表', icon: 'success' })
+  } catch (e) {
+    console.error('[webview-utils] 添加失败:', e)
+    uni.showToast({ title: '添加失败', icon: 'none' })
+  }
+}
+
+export function removeStockFromMyPool(code : string, name : string) : void {
+  try {
+    const key = todayPoolKey()
+    const raw = uni.getStorageSync(key) as string
+    if (raw == null || raw.length == 0) {
+      uni.showToast({ title: '关注列表为空', icon: 'none' })
+      return
+    }
+    let allData = {} as UTSJSONObject
+    try { allData = JSON.parse(raw) as UTSJSONObject } catch (_) { return }
+    const d = new Date()
+    const y = d.getFullYear().toString()
+    const m = (d.getMonth() + 1).toString().padStart(2, '0')
+    const day = d.getDate().toString().padStart(2, '0')
+    const ds = y + m + day
+    const rawEntry = allData[ds]
+    const entry = rawEntry != null ? rawEntry as UTSJSONObject : { content: '' } as UTSJSONObject
+    const contentStr = (entry['content'] as string) ?? ''
+    const filtered = contentStr.split(' ').filter((item : string) : boolean =>
+      item.trim().length > 0
+      && !item.trim().startsWith(code) && !item.trim().startsWith(name)
+      && !item.trim().endsWith(code) && !item.trim().endsWith(name)
+    )
+    entry['content'] = filtered.join(' ')
+    allData[ds] = entry as UTSJSONObject
+    uni.setStorageSync(key, JSON.stringify(allData))
+    uni.showToast({ title: '已从关注列表删除', icon: 'success' })
+  } catch (e) {
+    console.error('[webview-utils] 删除失败:', e)
+    uni.showToast({ title: '删除失败', icon: 'none' })
+  }
+}
+
+// ── 股票 action 分发 ────────────────────────────────────────
+
+export function handleStockAction(action : string, code : string, name : string) : void {
+  if (action == 'add' || action == 'stock_add') {
+    addStockToMyPool(code, name)
+  } else if (action == 'remove' || action == 'stock_remove') {
+    removeStockFromMyPool(code,name)
+  }
+}
+
+// ── 链接复制 ────────────────────────────────────────────────
+
+/**
+ * 复制链接到剪贴板
+ * @param remoteUrl  当前页面的远程 URL
+ * @param webSrc     当前 webSrc（用于判断是否是 kline 页面）
+ */
+export function copyWebLink(remoteUrl : string, webSrc : string) : void {
+  let link = remoteUrl
+  if (webSrc.indexOf('kline-report-final.html') >= 0) {
+    const qIdx = webSrc.indexOf('?')
+    const params = qIdx >= 0 ? webSrc.substring(qIdx) : ''
+    link = remoteUrl.length >= 10
+      ? remoteUrl
+      : 'http://wap.mpsdk.com/static/xstarecn/kline-report-final.html' + params
+  }
+  if (link.length < 10) return
+  uni.setClipboardData({
+    data: link,
+    success: () => { uni.showToast({ title: '链接已复制', icon: 'success' }) },
+    fail: ()    => { uni.showToast({ title: '复制失败', icon: 'none' }) }
+  })
+}
+
+//////////////////////////////////////////////////
+
+export function goBack() : void {
+	uni.navigateBack()
+}
+export function goMyPool() : void {
+	uni.navigateTo({ url: '/pages/mypool/index' })
+}
+
+export function buildQuery(keys:string[],params: UTSJSONObject): string {
+	const query : string[] = []
+	if (keys.length > 0) {
+		keys.forEach((key : string) => {
+			const val =  ( params[key] as string | null) ?? ''
+			if (val != '') query.push(key + '=' + encodeURIComponent(val))
+		})
+		return query.length > 0 ? '?' + query.join('&') : ''
+	} else {
+		const map = params.toMap()
+		
+	for (const key of map.keys) {
+		const val = (map.get(key) as string | null) ?? ''
+		if (val != null && val != '') {
+			query.push(key + '=' + encodeURIComponent(val))
+		}
+	}
+		return query.length > 0 ? '?' + query.join('&') : ''
+	}
+}
+
+function buildQueryToData(params: UTSJSONObject): string {
+  return '?data=' + encodeURIComponent(JSON.stringify(params))
+}
+
+// ── splash_config 公共读取 ──────────────────────────────────────
+
+/**
+ * 从 splash_config 读取指定 fileKey 的 remoteUrl，未取到则返回 fallbackUrl
+ */
+export function getSplashRemoteUrl(fileKey: string, fallbackUrl: string): string {
+	const raw = uni.getStorageSync('splash_config') as string
+	if (raw != null && raw != '') {
+		try {
+			const config = JSON.parse(raw) as UTSJSONObject
+			const files = config['files'] as UTSJSONObject | null
+			if (files != null) {
+				const entry = files[fileKey] as UTSJSONObject | null
+				if (entry != null) {
+					const url = entry['remoteUrl']?.toString() ?? ''
+					if (url != '') return url
+				}
+			}
+		} catch (_) {}
+	}
+	return fallbackUrl
+}
+
+/**
+ * 从 splash_config 读取指定 fileKey 的版本号
+ * 空字符串 = 未配置或远端不可达
+ */
+export async function getSplashConfigVersion(fileKey: string): Promise<string> {
+	const raw = uni.getStorageSync('splash_config') as string
+	if (raw == null || raw == '') return ''
+	let config: UTSJSONObject = {} as UTSJSONObject
+	try { config = JSON.parse(raw) as UTSJSONObject } catch (_) { return '' }
+	const files = config['files'] as UTSJSONObject | null
+	if (files == null) return ''
+	const fileEntry = files[fileKey] as UTSJSONObject | null
+	if (fileEntry == null) return ''
+	const version = (fileEntry['version']?.toString() ?? '')
+	const remoteUrl = (fileEntry['remoteUrl']?.toString() ?? '')
+	const disabled = fileEntry.getBoolean("disabled") ?? false
+	if (version == '' || remoteUrl == '' || disabled == true) return ''
+	const exists = await new Promise<boolean>((resolve) => {
+		if (remoteUrl == null || remoteUrl.length < 10) {
+			return resolve(false)
+		}
+		uni.request({
+			url: remoteUrl,
+			method: 'HEAD',
+			success: (res) => resolve(res.statusCode == 200),
+			fail: () => resolve(false)
+		})
+	})
+	return exists ? version : ''
+}

@@ -1,11 +1,12 @@
 <template>
   <view style="flex:1;background:#000;">
     <view :style="{ height: statusBarHeight + 'px', backgroundColor: '#000' }" />
-    <web-view :src="webUrl" style="flex:1;" @message="onMessage"></web-view>
+    <web-view :src="webUrl" style="flex:1;" @message="onWebViewMessage"></web-view>
   </view>
 </template>
 
 <script lang="uts">
+	import { handleBridgeAction } from '@/utils/webview-bridge.uts'
 export default {
   data() {
     return {
@@ -14,18 +15,14 @@ export default {
     }
   },
   methods: {
-    onMessage(e: UTSJSONObject) {
-      const data = e['detail'] as UTSJSONObject
-      if (data !== null) {
-        const arr = data['data'] as UTSJSONObject[]
-        if (arr !== null && arr.length > 0) {
-          const msg = arr[0]
-          const msgType = msg['type'] as string
-          if (msgType !== null && msgType === 'scanQR') {
-            this.doScan()
-          }
-        }
-      }
+    onWebViewMessage(event : UniWebViewMessageEvent) : void {
+        console.log('[WebviewPage] 收到 web-view 消息:', JSON.stringify(event.detail))
+
+		const msg = event.detail.data[0]
+		const action = msg.action as string
+		if (action == 'scanQR') {
+			this.doScan()
+		}         
     },
     doScan() {
       const self = this
