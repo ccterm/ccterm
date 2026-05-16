@@ -30,6 +30,12 @@ interface ContextMenuState {
   command?: string;
 }
 
+interface TooltipState {
+  command: string;
+  x: number;
+  y: number;
+}
+
 const HistoryPanel: React.FC<{ onClose: () => void; embedded?: boolean; activeSessionId?: string }> = ({ onClose, embedded, activeSessionId }) => {
   const [allRecords, setAllRecords] = useState<CommandRecord[]>([]);
   const [stats, setStats] = useState<HistoryStats | null>(null);
@@ -43,6 +49,9 @@ const HistoryPanel: React.FC<{ onClose: () => void; embedded?: boolean; activeSe
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [filterTextarea, setFilterTextarea] = useState('');
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [addCommandText, setAddCommandText] = useState('');
 
   // Load data + auto-refresh on new records
   useEffect(() => {
@@ -164,6 +173,21 @@ const HistoryPanel: React.FC<{ onClose: () => void; embedded?: boolean; activeSe
     setFilterDialogOpen(false);
   }, [filterTextarea]);
 
+  const handleAddCommand = useCallback(async () => {
+    const cmd = addCommandText.trim();
+    if (!cmd) return;
+    await window.historyAPI.record({
+      command: cmd,
+      directory: currentCwd || '',
+      sessionId: activeSessionId || '',
+      profile: '',
+      exitCode: null,
+    });
+    setAddDialogOpen(false);
+    setAddCommandText('');
+    loadData();
+  }, [addCommandText, currentCwd, activeSessionId, viewMode]);
+
   // Context menu handlers
   const handleContextMenu = useCallback((e: React.MouseEvent, recordId: string, command: string) => {
     e.preventDefault();
@@ -176,6 +200,13 @@ const HistoryPanel: React.FC<{ onClose: () => void; embedded?: boolean; activeSe
   }, []);
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
+
+  const showTooltip = useCallback((e: React.MouseEvent, command: string) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setTooltip({ command, x: rect.left, y: window.innerHeight - rect.top + 4 });
+  }, []);
+
+  const hideTooltip = useCallback(() => setTooltip(null), []);
 
   useEffect(() => {
     if (!contextMenu) return;
@@ -204,6 +235,7 @@ const HistoryPanel: React.FC<{ onClose: () => void; embedded?: boolean; activeSe
   const panel = (
       <div className={`history-panel${embedded ? ' history-panel-embedded' : ''}`} onClick={(e) => e.stopPropagation()} onContextMenu={handlePanelContextMenu}>
         <div className="history-header">
+          <button className="history-add-btn" onClick={() => { setAddCommandText(''); setAddDialogOpen(true); }} title="Add command">+</button>
           <h2>Command History</h2>
           <div className="history-header-actions">
             <button
@@ -315,6 +347,8 @@ const HistoryPanel: React.FC<{ onClose: () => void; embedded?: boolean; activeSe
                   key={record.id}
                   className="history-item"
                   onContextMenu={(e) => handleContextMenu(e, record.id, record.command)}
+                  onMouseEnter={(e) => showTooltip(e, record.command)}
+                  onMouseLeave={hideTooltip}
                 >
                   <div className="history-item-main">
                     <code className="history-item-command">{record.command}</code>
@@ -411,6 +445,41 @@ const HistoryPanel: React.FC<{ onClose: () => void; embedded?: boolean; activeSe
                 <button className="history-btn filter-apply-btn" onClick={applyFilterDialog}>Apply</button>
               </div>
             </div>
+          </div>
+        )}
+
+        {addDialogOpen && (
+          <div className="filter-dialog-overlay" onClick={() => setAddDialogOpen(false)}>
+            <div className="filter-dialog" onClick={(e) => e.stopPropagation()}>
+              <div className="filter-dialog-header">
+                <h3>Add Command</h3>
+                <button className="history-btn" onClick={() => setAddDialogOpen(false)}>✕</button>
+              </div>
+              <div className="filter-dialog-body">
+                <label className="filter-textarea-label">
+                  Command text:
+                </label>
+                <input
+                  className="history-search-input"
+                  type="text"
+                  placeholder="e.g. git status"
+                  value={addCommandText}
+                  onChange={(e) => setAddCommandText(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleAddCommand(); }}
+                  autoFocus
+                />
+              </div>
+              <div className="filter-dialog-footer">
+                <button className="history-btn" onClick={() => setAddDialogOpen(false)}>Cancel</button>
+                <button className="history-btn filter-apply-btn" onClick={handleAddCommand}>Add</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tooltip && (
+          <div className="history-tooltip" style={{ left: tooltip.x, bottom: tooltip.y }}>
+            {tooltip.command}
           </div>
         )}
 

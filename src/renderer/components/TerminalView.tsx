@@ -252,6 +252,11 @@ const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }
       timestamp: Date.now(),
     };
     window.remoteAPI.pushSnapshot(sessionId, snapshot);
+    // Keep active session in sync so phone shows the correct tab
+    const activeTabId = useTabStore.getState().activeTabId;
+    if (tabId === activeTabId) {
+      window.remoteAPI.setActiveSession(sessionId);
+    }
     // Also push via relay if connected
     window.relayAPI.isConnected().then(connected => {
       if (connected) window.relayAPI.pushSnapshot(sessionId, snapshot);

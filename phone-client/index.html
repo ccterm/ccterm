@@ -628,16 +628,22 @@
       for (let i = 0; i < snap.lines.length; i++) {
         const line = snap.lines[i];
         const cls = 'line';
-        let text = line ? escHtml(line.text) : '';
+        const rawText = line ? line.text : '';
         const fgStyle = (line && line.fg && line.fg !== 7) ? ` style="color:${ansiToCss(line.fg)}"` : '';
+        let text;
         if (i === snap.cursorRow && typeof snap.cursorCol === 'number') {
           const col = snap.cursorCol;
-          if (col < text.length) {
-            text = text.substring(0, col) + `<span class="cursor-char">${text.charAt(col)}</span>` + text.substring(col + 1);
+          if (col < rawText.length) {
+            text = escHtml(rawText.substring(0, col))
+              + '<span class="cursor-char">' + escHtml(rawText.charAt(col)) + '</span>'
+              + escHtml(rawText.substring(col + 1));
           } else {
-            for (let j = text.length; j < col; j++) text += ' ';
+            text = escHtml(rawText);
+            for (let j = rawText.length; j < col; j++) text += ' ';
             text += '<span class="cursor-char"> </span>';
           }
+        } else {
+          text = escHtml(rawText);
         }
         html += `<div class="${cls}"${fgStyle}>${text}</div>`;
       }

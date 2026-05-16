@@ -85,6 +85,30 @@
   flex: 1;
 }
 
+.history-add-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid #454545;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  transition: background 0.1s, color 0.1s;
+  flex-shrink: 0;
+}
+
+.history-add-btn:hover {
+  background: #0078d4;
+  border-color: #0078d4;
+  color: #fff;
+}
+
 .history-btn {
   padding: 4px 10px;
   font-size: 12px;
@@ -338,6 +362,26 @@
 
 .filter-textarea:focus {
   border-color: #0078d4;
+}
+
+/* History item tooltip */
+.history-tooltip {
+  position: fixed;
+  z-index: 2500;
+  background: #1a1a1a;
+  border: 1px solid #454545;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  color: #ddd;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-width: 560px;
+  max-height: calc(1.4em * 10 + 16px);
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
 }
 
 /* Context menu */

@@ -92,6 +92,13 @@
     }
     .tab-add:active { color:#fff; background:#2d2d2d; }
 
+    .back-btn {
+      padding:2px 6px; font-size:16px; color:#888; background:transparent;
+      border:1px solid transparent; border-radius:4px; cursor:pointer;
+      flex-shrink:0; line-height:1;
+    }
+    .back-btn:active { color:#e74856; background:#2d2d2d; }
+
     .toolbar {
       display:flex; gap:4px; padding:4px 8px; flex-shrink:0;
       background:#1a1a1a; border-bottom:1px solid #2a2a2a;
@@ -126,9 +133,9 @@
       display:flex; flex-direction:column;
     }
     .terminal .line { white-space:pre; min-height:1.4em; word-break:break-all; }
-    .terminal .line.cursor::after {
-      content:''; display:inline-block; width:0.5em; height:1em;
-      background:#ccc; vertical-align:text-bottom; animation:blink 1s step-end infinite;
+    .terminal .cursor-char {
+      background:#ccc; color:#000;
+      animation:blink 1s step-end infinite;
     }
     @keyframes blink { 50% { opacity:0; } }
 
@@ -179,6 +186,7 @@
   <div id="setupPage" class="setup-page"></div>
   <div id="termPage" class="term-page hidden">
     <div class="header" id="header">
+      <button class="back-btn" onclick="disconnect()" title="断开连接">←</button>
       <div class="dot" id="statusDot"></div>
       <div id="tabButtons"></div>
       <button class="tab-add" onclick="createTab()" title="新建标签">+</button>
@@ -239,6 +247,12 @@
     };
     var expectingNewSession = false;
     var knownSessionIds = new Set();
+    var relayReconnectAttempts = 0;
+    var MAX_RETRIES = 5;
+    var httpFailCount = 0;
+    var MAX_HTTP_FAILURES = 5;
+    var intentionalClose = false;
+    var activeSessionRetries = 0;
 
     // ====== Utils ======
     function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -276,6 +290,29 @@
       byId('terminal').innerHTML='<div class="empty">等待终端连接...</div>';
     }
 
+    function goToSetup(errMsg){
+      intentionalClose = true;
+      if(relayWs){ try{relayWs.close()}catch(e){} relayWs=null; }
+      if(relayReconnectTimer){ clearTimeout(relayReconnectTimer); relayReconnectTimer=null; }
+      relayReconnectAttempts = 0;
+      httpFailCount = 0;
+      activeSessionRetries = 0;
+      if(pollTimer){ clearInterval(pollTimer); pollTimer=null; }
+      byId('termPage').classList.add('hidden');
+      byId('setupPage').classList.remove('hidden');
+      renderSetup();
+      if(errMsg) byId('errorMsg').textContent = errMsg;
+    }
+
+    function disconnect(){
+      goToSetup();
+    }
+
+    function httpFailed(){
+      httpFailCount++;
+      if(httpFailCount > MAX_HTTP_FAILURES) goToSetup('连接已断开');
+    }
+
     function shortTabTitle(s){ var t=s.tabTitle||s.id; return t.length>20?t.substring(0,18)+'...':t; }
 
     function updateTabButtons(){
@@ -290,26 +327,65 @@
       var wsUrl='ws://'+cfg.host+':'+cfg.port+'/?room='+encodeURIComponent(cfg.room||'')+'&role=phone';
       relayWs=new WebSocket(wsUrl);
       relayWs.onopen=function(){
-        showTermUI();
+        relayReconnectAttempts = 0;
         lastUpdate=Date.now();
+        // Don't show terminal yet - wait for sessions to confirm desktop is online
         relaySend({type:'requestSessions'});relaySend({type:'requestWorkspace'});relaySend({type:'requestHistory'});
-        if(pollTimer)clearInterval(pollTimer);
-        pollTimer=setInterval(function(){
-          relaySend({type:'requestSessions'});
-          relaySend({type:'requestSnapshot',sessionId:activeSessionId});
-          if(activeSessionId){var ago=Date.now()-lastUpdate;byId('statusDot').className='dot '+(ago<5000?'green':ago<15000?'yellow':'red')}
-        },2000);
+        // If no sessions response within 3s, no desktop is connected
+        if(relayReconnectTimer)clearTimeout(relayReconnectTimer);
+        relayReconnectTimer=setTimeout(function(){
+          goToSetup('未检测到桌面端在线');
+        },3000);
       };
       relayWs.onmessage=function(e){try{relayHandle(JSON.parse(e.data))}catch(err){}}
-      relayWs.onclose=function(){byId('statusDot').className='dot red';if(relayReconnectTimer)clearTimeout(relayReconnectTimer);relayReconnectTimer=setTimeout(function(){relayConnect(cfg)},5000)}
+      relayWs.onclose=function(){
+        if(intentionalClose){ intentionalClose=false; return; }
+        byId('statusDot').className='dot red';
+        relayReconnectAttempts++;
+        if(relayReconnectAttempts > MAX_RETRIES){
+          goToSetup('连接已断开');
+        }else{
+          if(relayReconnectTimer)clearTimeout(relayReconnectTimer);
+          relayReconnectTimer=setTimeout(function(){relayConnect(cfg)},5000);
+        }
+      }
       relayWs.onerror=function(){}
     }
     function relaySend(o){if(relayWs&&relayWs.readyState===WebSocket.OPEN)relayWs.send(JSON.stringify(o))}
     function relayHandle(msg){
       if(msg.type==='sessions'){
-        sessions=msg.data||[];updateTabButtons();
-        if(!activeSessionId&&sessions.length>0){activeSessionId=msg.activeSessionId||sessions[0].id;updateTabButtons();relaySend({type:'requestSnapshot',sessionId:activeSessionId})}
-        else if(activeSessionId){var f=false;for(var i=0;i<sessions.length;i++){if(sessions[i].id===activeSessionId){f=true;break}}if(!f&&sessions.length>0){activeSessionId=sessions[0].id;updateTabButtons();relaySend({type:'requestSnapshot',sessionId:activeSessionId})}}
+        sessions=msg.data||[];
+        var termWasHidden=byId('termPage').classList.contains('hidden');
+        if(termWasHidden){
+          if(relayReconnectTimer){clearTimeout(relayReconnectTimer);relayReconnectTimer=null;}
+          if(sessions.length===0){goToSetup('未检测到桌面端在线');return;}
+        }
+        updateTabButtons();
+        if(!activeSessionId&&sessions.length>0){
+          if(msg.activeSessionId){
+            var f2=false;for(var i=0;i<sessions.length;i++){if(sessions[i].id===msg.activeSessionId){f2=true;break}}
+            if(f2)activeSessionId=msg.activeSessionId;
+          }
+          if(!activeSessionId)activeSessionId=sessions[0].id;
+          updateTabButtons();relaySend({type:'requestSnapshot',sessionId:activeSessionId});
+        }else if(activeSessionId){
+          if(msg.activeSessionId&&msg.activeSessionId!==activeSessionId&&sessions.some(function(s){return s.id===msg.activeSessionId})){
+            activeSessionId=msg.activeSessionId;updateTabButtons();relaySend({type:'requestSnapshot',sessionId:activeSessionId});
+          }else{
+            var f=false;for(var i=0;i<sessions.length;i++){if(sessions[i].id===activeSessionId){f=true;break}}
+            if(!f&&sessions.length>0){activeSessionId=sessions[0].id;updateTabButtons();relaySend({type:'requestSnapshot',sessionId:activeSessionId})}
+          }
+        }
+        if(termWasHidden&&activeSessionId){
+          showTermUI();
+          if(pollTimer)clearInterval(pollTimer);
+          pollTimer=setInterval(function(){
+            relaySend({type:'requestSessions'});
+            relaySend({type:'requestSnapshot',sessionId:activeSessionId});
+            if(activeSessionId){var ago=Date.now()-lastUpdate;byId('statusDot').className='dot '+(ago<5000?'green':ago<15000?'yellow':'red')}
+            if(Date.now()-lastUpdate>10000)goToSetup('连接已断开');
+          },2000);
+        }
       }else if(msg.type==='snapshot'){
         if(msg.sessionId===activeSessionId&&msg.data&&msg.data.lines){lastUpdate=Date.now();renderSnapshot(msg.data)}
       }else if(msg.type==='history'){historyRecords=msg.data||[];renderHistory();}
@@ -331,10 +407,15 @@
         fetch(API_BASE+'/api/sessions',{headers:authHeaders()}).then(function(r){return r.json()}),
         fetch(API_BASE+'/api/sessions/active',{headers:authHeaders()}).then(function(r){return r.json()})
       ]).then(function(r){var sessList=r[0],active=r[1];
-        sessions=sessList;showTermUI();
-        if(sessions.length>0){var tid=(active.sessionId&&sessions.some(function(s){return s.id===active.sessionId}))?active.sessionId:sessions[0].id;switchTab(tid,false)}
-        else{byId('terminal').innerHTML='<div class="empty">等待终端连接...</div>'}
-        startPolling();loadWorkspace();loadHistory();
+        sessions=sessList;
+        if(sessions.length>0){
+          showTermUI();lastUpdate=Date.now();
+          var tid=(active.sessionId&&sessions.some(function(s){return s.id===active.sessionId}))?active.sessionId:sessions[0].id;
+          switchTab(tid,false);
+          httpFailCount = 0; startPolling();loadWorkspace();loadHistory();
+        }else{
+          byId('errorMsg').textContent='未检测到桌面端在线';
+        }
       }).catch(function(err){byId('errorMsg').textContent=err.message||'无法连接服务器'});
     }
     function createTabHttp(){
@@ -385,22 +466,24 @@
     }
     function insertCmd(cmd){byId('cmdInput').value=cmd;byId('cmdInput').focus();closePanel()}
     function startPolling(){if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(poll,2000)}
-    function poll(){fetchSnapshot();fetchSessions();fetchActiveSession();updateStatus()}
+    function poll(){fetchSnapshot();fetchSessions();fetchActiveSession();updateStatus();if(Date.now()-lastUpdate>10000)goToSetup()}
     function fetchActiveSession(){
       fetch(API_BASE+'/api/sessions/active',{headers:authHeaders()}).then(function(r){return r.json()}).then(function(data){
+        httpFailCount = 0;
         if(ignoreNextActivePoll){ignoreNextActivePoll=false;return}
         if(data.sessionId&&data.sessionId!==activeSessionId&&sessions.some(function(s){return s.id===data.sessionId}))switchTab(data.sessionId,false)
-      }).catch(function(){});
+      }).catch(function(){ httpFailed(); });
     }
     function fetchSnapshot(){
       fetch(API_BASE+'/api/sessions/'+activeSessionId+'/snapshot',{headers:authHeaders()}).then(function(r){return r.json()}).then(function(snap){
         if(!snap||!snap.lines)return;
         if(snap.timestamp===lastSnapshotTime)return;
-        lastSnapshotTime=snap.timestamp;lastUpdate=Date.now();renderSnapshot(snap)
-      }).catch(function(){});
+        lastSnapshotTime=snap.timestamp;lastUpdate=Date.now();httpFailCount=0;renderSnapshot(snap)
+      }).catch(function(){ httpFailed(); });
     }
     function fetchSessions(){
       fetch(API_BASE+'/api/sessions',{headers:authHeaders()}).then(function(r){return r.json()}).then(function(data){
+        httpFailCount = 0;
         if(expectingNewSession){
           var ns=null;for(var i=0;i<data.length;i++){if(!knownSessionIds.has(data[i].id)){ns=data[i];break}}
           if(ns){expectingNewSession=false;sessions=data;updateTabButtons();switchTab(ns.id);return}
@@ -409,12 +492,12 @@
           sessions=data;updateTabButtons();
           if(!sessions.some(function(s){return s.id===activeSessionId})&&sessions.length>0)switchTab(sessions[0].id)
         }
-      }).catch(function(){});
+      }).catch(function(){ httpFailed(); });
     }
     function renderSnapshot(snap){
       var term=byId('terminal'),cwd=byId('cwdBar');
       if(snap.cwd)cwd.textContent=snap.cwd;
-      var h='';for(var i=0;i<snap.lines.length;i++){var l=snap.lines[i];var cls=(i===snap.cursorRow)?'line cursor':'line';var text=l?escHtml(l.text):'';if(l&&l.fg&&l.fg!==7)h+='<div class="'+cls+'" style="color:'+ansiToCss(l.fg)+'">'+text+'</div>';else h+='<div class="'+cls+'">'+text+'</div>'}
+      var h='';for(var i=0;i<snap.lines.length;i++){var l=snap.lines[i];var cls='line';var raw=l?l.text:'';var fgStyle=(l&&l.fg&&l.fg!==7)?' style="color:'+ansiToCss(l.fg)+'"':'';if(i===snap.cursorRow&&typeof snap.cursorCol==='number'){var col=snap.cursorCol;if(col<raw.length){var before=escHtml(raw.substring(0,col));var at=escHtml(raw.charAt(col));var after=escHtml(raw.substring(col+1));h+='<div class="'+cls+'"'+fgStyle+'>'+before+'<span class="cursor-char">'+at+'</span>'+after+'</div>'}else{var text=escHtml(raw);for(var j=raw.length;j<col;j++)text+=' ';text+='<span class="cursor-char"> </span>';h+='<div class="'+cls+'"'+fgStyle+'>'+text+'</div>'}}else{h+='<div class="'+cls+'"'+fgStyle+'>'+escHtml(raw)+'</div>'}}
       var wasBottom=term.scrollTop+term.clientHeight>=term.scrollHeight-50;term.innerHTML=h;if(wasBottom)term.scrollTop=term.scrollHeight;
     }
     function updateStatus(){var dot=byId('statusDot'),ago=Date.now()-lastUpdate;dot.className='dot '+(ago<5000?'green':ago<15000?'yellow':'red')}
