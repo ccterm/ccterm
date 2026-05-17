@@ -1,7 +1,8 @@
 import * as crypto from 'crypto';
 import WebSocket from 'ws';
 import { BrowserWindow, ipcMain } from 'electron';
-import { addCommand, saveSnapshot } from './remoteServer';
+import { addCommand, setActiveSessionId } from './remoteServer';
+import { startRemoteSync, stopRemoteSync } from './remoteSync';
 
 let ws: WebSocket | null = null;
 let roomId = '';
@@ -113,6 +114,7 @@ function handleRelayMessage(msg: any): void {
 
     case 'setActiveSession': {
       if (msg.sessionId) {
+        setActiveSessionId(msg.sessionId);
         BrowserWindow.getAllWindows().forEach((win) => {
           if (!win.isDestroyed() && win.webContents && !win.webContents.isDestroyed()) {
             win.webContents.send('remote:activateTab', msg.sessionId);
@@ -307,6 +309,11 @@ export function setupRelayHandlers(): void {
   ipcMain.handle('relay:toggle', async () => {
     if (connected) {
       disconnectRelay();
+      // Stop sync unless HTTP server is also running
+      const { isRemoteServerRunning } = require('./remoteServer');
+      if (!isRemoteServerRunning()) {
+        stopRemoteSync();
+      }
       return { connected: false, roomId: '', phoneUrl: '' };
     }
     // Read config for relay settings
@@ -315,6 +322,10 @@ export function setupRelayHandlers(): void {
     const rc = config.remoteControl;
     try {
       await connectRelay(rc.relayServerUrl || 'ws://localhost:8080', rc.relayToken || '');
+      // Start sync if HTTP server isn't running
+      if (!rc.enabled) {
+        startRemoteSync(rc.syncInterval);
+      }
       return { connected: true, roomId, phoneUrl: getRelayPhoneUrl() };
     } catch (err: any) {
       return { connected: false, roomId: '', phoneUrl: '', error: err.message };
@@ -327,9 +338,8 @@ export function setupRelayHandlers(): void {
 
   ipcMain.handle('relay:getRoomId', () => roomId);
 
-  // When renderer pushes a snapshot, also relay it via WebSocket
+  // When renderer pushes a snapshot for the active session, forward via WebSocket
   ipcMain.handle('relay:pushSnapshot', (_event, sessionId: string, snapshot: any) => {
-    saveSnapshot(sessionId, snapshot);
     if (connected && ws) {
       sendRelayMessage({ type: 'snapshot', sessionId, data: snapshot });
     }

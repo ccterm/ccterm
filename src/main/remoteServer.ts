@@ -336,6 +336,10 @@ export function setupRemoteHandlers(): void {
   });
 }
 
+export function isRemoteServerRunning(): boolean {
+  return server !== null;
+}
+
 export function stopRemoteServer(): void {
   if (server) {
     server.close();

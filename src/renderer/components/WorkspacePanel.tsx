@@ -90,6 +90,9 @@ const WorkspacePanel: React.FC = () => {
           <div className="context-menu-item" onClick={() => handleNewTerminal(contextMenu.folder)}>
             New Terminal
           </div>
+          <div className="context-menu-item" onClick={() => { window.workspaceAPI.revealInExplorer(contextMenu.folder); closeContextMenu(); }}>
+            Reveal in Explorer
+          </div>
           <div className="context-menu-divider" />
           <div className="context-menu-item danger" onClick={() => { removeFolder(contextMenu.folder); closeContextMenu(); }}>
             Remove from Workspace

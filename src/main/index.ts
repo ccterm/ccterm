@@ -110,7 +110,13 @@ app.whenReady().then(() => {
   }
   if (config.remoteControl.relayEnabled && config.remoteControl.relayServerUrl) {
     connectRelay(config.remoteControl.relayServerUrl, config.remoteControl.relayToken || '')
-      .then(() => { console.log('[CCTerm] Relay connected on startup'); })
+      .then(() => {
+        console.log('[CCTerm] Relay connected on startup');
+        // Start sync loop if HTTP server isn't already running it
+        if (!config.remoteControl.enabled) {
+          startRemoteSync(config.remoteControl.syncInterval);
+        }
+      })
       .catch((err) => { console.error('[CCTerm] Relay startup failed:', err.message); });
   }
 

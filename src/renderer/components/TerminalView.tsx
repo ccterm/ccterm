@@ -225,6 +225,7 @@ const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }
   }, [sessionId, tabId, updateTabCwd]);
 
   // Periodic snapshot push for remote control
+  const lastSnapshotRef = useRef<string>('');
   const pushSnapshot = useCallback(() => {
     const term = termInstanceRef.current;
     if (!term) return;
@@ -251,16 +252,19 @@ const TerminalView: React.FC<TerminalViewProps> = ({ tabId, sessionId, onReady }
       lines,
       timestamp: Date.now(),
     };
+    // Skip if nothing changed since last push
+    const { timestamp: _, ...snapshotWithoutTs } = snapshot;
+    const fingerprint = JSON.stringify(snapshotWithoutTs);
+    if (fingerprint === lastSnapshotRef.current) return;
+    lastSnapshotRef.current = fingerprint;
     window.remoteAPI.pushSnapshot(sessionId, snapshot);
     // Keep active session in sync so phone shows the correct tab
     const activeTabId = useTabStore.getState().activeTabId;
     if (tabId === activeTabId) {
       window.remoteAPI.setActiveSession(sessionId);
+      // Only push the active tab's snapshot via relay — phone only displays active session
+      window.relayAPI.pushSnapshot(sessionId, snapshot).catch(() => {});
     }
-    // Also push via relay if connected
-    window.relayAPI.isConnected().then(connected => {
-      if (connected) window.relayAPI.pushSnapshot(sessionId, snapshot);
-    }).catch(() => {});
   }, [sessionId, tabId, getTabCwd]);
 
   useEffect(() => {

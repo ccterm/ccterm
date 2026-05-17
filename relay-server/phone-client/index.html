@@ -186,7 +186,7 @@
     let TOKEN = '';
     let activeSessionId = '';
     let sessions = [];
-    let lastSnapshotTime = 0;
+    let lastSnapshotFingerprint = '';
     let pollTimer = null;
     let lastUpdate = 0;
     const inputHistory = [];
@@ -286,6 +286,9 @@
 
         case 'snapshot':
           if (msg.sessionId === activeSessionId && msg.data && msg.data.lines) {
+            var fp = msg.data.lines.length + '|' + msg.data.cursorRow + '|' + msg.data.cursorCol;
+            if (fp === lastSnapshotFingerprint) break;
+            lastSnapshotFingerprint = fp;
             lastUpdate = Date.now();
             renderSnapshot(msg.data);
           }
@@ -411,7 +414,7 @@
     function switchTab(id, notifyServer) {
       if (MODE === 'relay') { relaySwitchTab(id); return; }
       activeSessionId = id;
-      lastSnapshotTime = 0;
+      lastSnapshotFingerprint = '';
       fetchSnapshot();
       updateTabButtons();
       if (notifyServer !== false) {
@@ -578,8 +581,9 @@
             }
             return;
           }
-          if (snap.timestamp === lastSnapshotTime) return;
-          lastSnapshotTime = snap.timestamp;
+          var fp = snap.lines.length + '|' + (snap.cursorRow || 0) + '|' + (snap.cursorCol || 0);
+          if (fp === lastSnapshotFingerprint) return;
+          lastSnapshotFingerprint = fp;
           lastUpdate = Date.now();
           renderSnapshot(snap);
         })

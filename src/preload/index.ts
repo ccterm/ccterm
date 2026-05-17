@@ -182,12 +182,14 @@ export interface WorkspaceAPI {
   getAll(): Promise<string[]>;
   save(folders: string[]): Promise<void>;
   selectFolder(): Promise<string[] | null>;
+  revealInExplorer(folder: string): Promise<void>;
 }
 
 const workspaceAPI: WorkspaceAPI = {
   getAll: () => ipcRenderer.invoke('workspace:getAll'),
   save: (folders) => ipcRenderer.invoke('workspace:save', folders),
   selectFolder: () => ipcRenderer.invoke('workspace:selectFolder'),
+  revealInExplorer: (folder) => ipcRenderer.invoke('workspace:revealInExplorer', folder),
 };
 
 contextBridge.exposeInMainWorld('workspaceAPI', workspaceAPI);

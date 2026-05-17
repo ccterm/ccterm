@@ -1,4 +1,4 @@
-import { app, ipcMain, dialog, BrowserWindow } from 'electron';
+import { app, ipcMain, dialog, BrowserWindow, shell } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -44,6 +44,10 @@ export function setupWorkspaceHandlers(): void {
 
   ipcMain.handle('workspace:save', (_event, folders: string[]) => {
     saveFolders(folders);
+  });
+
+  ipcMain.handle('workspace:revealInExplorer', async (_event, folder: string) => {
+    await shell.openPath(folder);
   });
 
   ipcMain.handle('workspace:selectFolder', async () => {

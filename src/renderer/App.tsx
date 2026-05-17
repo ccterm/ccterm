@@ -23,6 +23,8 @@ const App: React.FC = () => {
   const { registerCommands } = useCommandStore();
   const { load: loadConfig, loaded: configLoaded } = useConfigStore();
   const { visible: wsVisible, setVisible: setWsVisible, folders: wsFolders, activeFolder, setFolders } = useWorkspaceStore();
+  const activeTab = tabs.find(t => t.id === activeTabId);
+  const statusCwd = activeTab?.cwd || activeFolder || '';
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showPromptTool, setShowPromptTool] = useState(false);
@@ -488,6 +490,9 @@ const App: React.FC = () => {
         {activeSessionId && <SearchOverlay sessionId={activeSessionId} />}
         <CommandPalette />
         {showPromptTool && <PromptTool onClose={() => setShowPromptTool(false)} />}
+      </div>
+      <div className="status-bar">
+        <span className="status-bar-cwd" title={statusCwd}>{statusCwd}</span>
       </div>
       {showQrCode && (
         <QrCodePanel
