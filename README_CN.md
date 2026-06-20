@@ -5,6 +5,8 @@
 >
 > [English](README.md)
 
+![截图](screenshot.jpg)
+
 ---
 
 ## 🎯 为什么用 CCTerm？
