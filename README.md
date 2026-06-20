@@ -5,7 +5,7 @@
 >
 > [中文文档](README_CN.md)
 
-![CCTerm Screenshot](screenshot.jpg)
+![CCTerm Screenshot](screenshot-v2.jpg)
 
 ---
 
