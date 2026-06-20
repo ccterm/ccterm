@@ -28,7 +28,7 @@ const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showPromptTool, setShowPromptTool] = useState(false);
-  const [defaultShellType, setDefaultShellType] = useState<string>('powershell');
+  const [defaultShellType, setDefaultShellType] = useState<string>('cmd');
   const [remoteRunning, setRemoteRunning] = useState(false);
   const [relayConnected, setRelayConnected] = useState(false);
   const [relayServerUrl, setRelayServerUrl] = useState('');

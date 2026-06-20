@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as fs from 'fs';
 import * as path from 'path';
 
-let defaultShellType = 'powershell';
+let defaultShellType = 'cmd';
 
 export function getDefaultShellType(): string {
   return defaultShellType;
