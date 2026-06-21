@@ -1,4 +1,4 @@
-# CCTerm — Claude Code Super Terminal
+# CCTerm — Claude Code Terminal Super Tool
 
 > The ultimate terminal emulator purpose-built for **Claude Code** and AI-assisted programming.  
 > Multi-tab, multi-shell, prompt-aware, mobile-ready.
